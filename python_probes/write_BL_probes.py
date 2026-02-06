@@ -50,6 +50,13 @@ def build_line_probes(x_0,L, level):
 
 
 def plot_probes(xyz_lines, dx):
+    """_summary_
+
+    Parameters
+    ----------
+    xyz_lines : probe locations Nx3
+    dx : spacing between probe
+    """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     colors = ["tab:blue", "tab:orange", "tab:green", "tab:red"]
@@ -65,11 +72,11 @@ def plot_probes(xyz_lines, dx):
 
 
 def main():
-    L = 2.56
-    level = 9
+    L = 2.56 #base length
+    level = 9 #most refined levels
+    x0=0.04 #x coord 
     outdir = "/Users/steven/OneDrive/Stanford/ONR project/Simulations Utilities" 
     fname_fmt = "BL_probes_x_{:.2f}.txt"
-    x0=0.04
     fname = fname_fmt.format(x0)
     xyz_lines, xyz, dx, y_n, z_n = build_line_probes(x0,L, level)
     header = f"x y z  # BL probes, dx={dx}, Ny={y_n}, Nz={z_n}"
