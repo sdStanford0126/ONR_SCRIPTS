@@ -5,22 +5,36 @@ from Universal_Subroutines import setPlotpref
 setPlotpref()
 
 #I/O settings
-casedir = "/Users/steven/OneDrive/Stanford/ONR project/results/baseline_new/144M"
-indir_fmt = "pcprobes_{:s}"
-probename = "BL"
-indir = indir_fmt.format(probename)
-inputdir = os.path.join(casedir,indir)
-outdir = casedir
-
-tid = 168500
+indir_fmt = "/pcprobes_{:s}_avg"
+probename = "BL_in"
 fname_fmt = "{:s}.{:08d}.pcd"
 pos_name_fmt = "{:s}.pxyz"
-fname = fname_fmt.format(probename,tid)
+
+casedir1 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/smooth"
+casedir2 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_025"
+indir = indir_fmt.format(probename)
+inputdir1 = casedir1+indir
+inputdir2 = casedir2+indir
+print(inputdir1)
+outdir = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/"
+
+tid1 = 168500
+fname1 = fname_fmt.format(probename,tid1)
 pos_name = pos_name_fmt.format(probename)
 
-fname = os.path.join(inputdir,fname)
-pos_name = os.path.join(inputdir,pos_name)
 
+tid2 = 109001
+fname2 = fname_fmt.format(probename,tid2)
+
+fname1 = os.path.join(inputdir1,fname1)
+pos_name1 = os.path.join(inputdir1,pos_name)
+print(fname1)
+print(pos_name1)
+
+fname2 = os.path.join(inputdir2,fname2)
+pos_name2 = os.path.join(inputdir2,pos_name)
+print(fname2)
+print(pos_name2)
 #parameters from data
 Ny = 400
 Nz = 200
@@ -74,7 +88,8 @@ def readData(fname,line_inds,inds):
     #reading data from file
     data = np.loadtxt(fname,skiprows=1)
     num_prob = data.shape[0]
-    data_org = np.zeros((num_prob,8),dtype=float)
+    num_var  = data.shape[1]
+    data_org = np.zeros((num_prob,num_var),dtype=float)
     data_org[inds,:] = data
     #the data are
     #avg(p), avg(rho), comp(avg(u),0), comp(avg(u),1), comp(avg(u),2), 
@@ -118,45 +133,56 @@ def readData(fname,line_inds,inds):
     return u_avg_x_lines,u_rms_x_lines,u_rms_y_lines,u_rms_z_lines
 
 
-def plotQuantities(lines,var_lines,var_name):
+def plotQuantities(lines,var_lines,var_name,label=""):
     #plot for all four lines the given quantity
     #for line 1/2
     for ind, line_xyz in enumerate(lines):
         x = line_xyz[0,0]
+        print(x)
         var_line = var_lines[ind]
         if ind <2: #first two
             z = line_xyz[0,2]
             y = line_xyz[:,1]
-            plt.figure()
+            plt.figure(ind)
             plt.tight_layout()
-            title_name_fmt = "{:s}, at $x/h=, z/h=${:.02f}"
-            title_name = title_name_fmt.format(var_name,z)
+            title_name_fmt = "{:s}, at x/h={:.02f}, z/h={:.02f}"
+            title_name = title_name_fmt.format(var_name,x,z)
+            print("title_name: ", title_name)
             fig_name_fmt = "x_{:.02f}_line{:d}_{:s}.pdf"
             fig_name = fig_name_fmt.format(x,ind,var_name)
+            print("fig_name: ", fig_name)
             plt.title(title_name)
-            plt.plot(var_line,y,"-o")
+            plt.plot(var_line,y,"-o",label=label)
+            plt.xlabel(var_name)
+            plt.ylabel("y")
+            plt.legend()
             plt.savefig(os.path.join(outdir,fig_name),bbox_inches='tight', dpi = 300)
         else:
             z = line_xyz[:,2]
             y = line_xyz[0,1]
-            plt.figure()
+            plt.figure(ind)
             plt.tight_layout()
-            title_name_fmt = "{:s}, at $x/h=, y/h=${:.02f}"
-            title_name = title_name_fmt.format(var_name,y)
+            title_name_fmt = "{:s}, at $x/h={:.02f}, y/h=${:.02f}"
+            title_name = title_name_fmt.format(var_name,x,y)
             fig_name_fmt = "x_{:.02f}_line{:d}_{:s}.pdf"
             fig_name = fig_name_fmt.format(x,ind,var_name)
             plt.title(title_name)
-            plt.plot(var_line,z)
+            plt.plot(var_line,z,"-o",label=label)
+            plt.xlabel(var_name)
+            plt.ylabel("z")
+            plt.legend()
             plt.savefig(os.path.join(outdir,fig_name),bbox_inches='tight', dpi = 300)
 
 
 def main():
-    inds,xyz_pos,lines,line_inds = readprobes(pos_name)
-    u_avg_x_lines,u_rms_x_lines,u_rms_y_lines,u_rms_z_lines = readData(fname,line_inds,inds)
-    plotQuantities(lines,u_avg_x_lines,"u_avg_x")
-    plotQuantities(lines,u_rms_x_lines,"u_rms_x")
-    plotQuantities(lines,u_rms_y_lines,"u_rms_y")
-    plotQuantities(lines,u_rms_z_lines,"u_rms_z")
+    inds1,_,lines1,line_inds1 = readprobes(pos_name1)
+    u_avg_x_lines1,u_rms_x_lines1,u_rms_y_lines1,u_rms_z_lines1 = readData(fname1,line_inds1,inds1)
+    #plotQuantities(lines1,u_avg_x_lines1,"u_avg_x","smooth")
+    plotQuantities(lines1,u_rms_x_lines1,"u_rms_x","smooth")
+    inds2,_,lines2,line_inds2 = readprobes(pos_name2)
+    u_avg_x_lines2,u_rms_x_lines2,u_rms_y_lines2,u_rms_z_lines2 = readData(fname2,line_inds2,inds2)
+    #plotQuantities(lines2,u_avg_x_lines2,"u_avg_x","rough 0.025h")
+    plotQuantities(lines2,u_rms_x_lines2,"u_rms_x","rough 0.025h")
 
 if __name__ == "__main__":
     main()

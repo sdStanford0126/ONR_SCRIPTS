@@ -24,7 +24,7 @@ def z_lim(x):
 
 xyz_all = []
 
-xs = np.linspace(-1,0,5)
+xs = np.linspace(-1,0,11)
 y = np.arange(-(1.0 - delta / 2.0), (1.0 - delta / 2.0) + delta * 0.5, delta)
 
 for x in xs:
@@ -44,7 +44,7 @@ print("yz_count:", yz_count)
 
 outdir = "/Users/steven/OneDrive/Stanford/ONR project/Simulations Utilities" 
 fname = "BL_interior_axprof.txt"
-header = f"x y z  # BL probes, delta={delta}, Nlayer={x.size}, Ny={y.size}, Nz={z.size}"
+header = f"x y z  # BL probes, delta={delta}, Nlayer={xs.size}, Ny={y.size}, Nz=varied"
 outpath = os.path.join(outdir,fname)
 np.savetxt(outpath,xyz_comb,delimiter=" ", header=header)
 #debug validation 

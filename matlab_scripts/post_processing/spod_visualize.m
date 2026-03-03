@@ -1,4 +1,4 @@
-s%visualize init SPOD results
+%visualize init SPOD results
 %Steven Dai, based on examples provided by O. T. Schmidt (oschmidt@ucsd.edu)
 clear;clc;close all; setPlotPref(1.5,'latex',14)
 %% laod data SPOD data
@@ -7,7 +7,7 @@ addpath("baseline_new/130M/")
 %% load xy plane (minor observer plane)
 input_dir = "~/Downloads/spod_results_xz_p/nfft390_novlp193_nblks6/";
 data_fname = "spod_energy.mat";
-plane_name = "Minor_observer";
+plane_name = "Major_observer";
 SPOD_eng_plot_name = "SPOD_p_var_" + plane_name + ".png"
 
 load(input_dir + data_fname);
