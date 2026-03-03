@@ -12,6 +12,7 @@ pos_name_fmt = "{:s}.pxyz"
 
 casedir1 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/smooth"
 casedir2 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_025"
+casedir3 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_0125"
 indir = indir_fmt.format(probename)
 inputdir1 = casedir1+indir
 inputdir2 = casedir2+indir
@@ -30,6 +31,11 @@ fname1 = os.path.join(inputdir1,fname1)
 pos_name1 = os.path.join(inputdir1,pos_name)
 print(fname1)
 print(pos_name1)
+
+fname2 = os.path.join(inputdir2,fname2)
+pos_name2 = os.path.join(inputdir2,pos_name)
+print(fname2)
+print(pos_name2)
 
 fname2 = os.path.join(inputdir2,fname2)
 pos_name2 = os.path.join(inputdir2,pos_name)
