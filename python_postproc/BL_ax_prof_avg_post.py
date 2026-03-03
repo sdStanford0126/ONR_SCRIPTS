@@ -2,7 +2,7 @@
 #results for the BL_interior_probes (axial profiles)
 import os 
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 L = 2.56 #baselength
 LEVEL=9 #mesh refinement level
@@ -49,8 +49,73 @@ print("total probe pts:", np.sum(Ny*Nzs))
 #then for a given x value, find the closest plane and extract the data from 
 # that plane and organize them in the y,z plane
 
+def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
+    #grab position data    
+    Pos=np.loadtxt(posName,skiprows=1)
+    ind=Pos[:,0]
+    ind = ind.astype(int)
+    Xr  =Pos[:,1]
+    Yr  =Pos[:,2]
+    Zr  =Pos[:,3]
+    Npts = np.size(ind)
+    X  =np.zeros(Npts)
+    Y  =np.zeros(Npts)
+    Z  =np.zeros(Npts)
+    X[ind]  =Xr
+    Y[ind]  =Yr
+    Z[ind]  =Zr
+    #print("data size", Npts)
+    #print("expected data size", np.sum(np.fromiter((Ny*Nz for Nz in Nzs),int)))
+    #plt.figure()
+    #plt.plot(X)
+    #plt.plot(Y)
+    #plt.plot(Z)
+    #plt.savefig("test.png")
+    # grab time series data from the given x position
+    X_ind = np.where(np.abs(X-x) < 1e-6)
+    Nz = findNz(x,delta)
+    print(X_ind[0].size)
+    print(Nz*Ny)
+    #now read data
+    tids = np.arange(tid_str,tid_end,dt)
+    Nt = np.size(tids)
+    u  = np.zeros((Nt,Ny,Nz))
+    rho  = np.zeros((Nt,Ny,Nz))
+    for i,tid in enumerate(tids):
+        DataName = DataName_fmt.format(int(tid))
+        print(DataName)
+        DataR = np.loadtxt(DataName,skiprows=1)
+        DataRo = np.zeros(np.shape(DataR))
+        DataRo[ind,:]=DataR[:,:]
+        u[i,:,:] = np.reshape(DataRo[X_ind[0],0],(Ny,Nz))
+        rho[i,:,:] = np.reshape(DataRo[X_ind[0],4],(Ny,Nz))
+        
+    
+    print(u.size)    
+    print(Nt*Ny*Nz)
+    mf = u*rho
+    return u,rho,mf
+   
+    
 
-def extract_plane():
-    pass
 
+
+if __name__ == "__main__":
+    data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.0125/pcprobe_int_axprof"
+    posName = os.path.join(data_dir,"int_axprof.pxyz")
+    fname_fmt = "int_axprof.{:08d}.pcd"
+    DataName_fmt = os.path.join(data_dir,fname_fmt)
+    print(xs)
+    u,rho,mf= extract_data(0,posName,DataName_fmt,54000,54500,50)
+    z_max = z_lim(0)
+    z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
+    print(mf.size)
+    print(mf.shape)
+    print(y.size * z.size)
+    print(z.size)
+    print(y.size)
+    mf_avg = np.squeeze(np.mean(mf,axis=0))
+    mf_tot = np.trapz(np.trapz(mf,z),y)
+    
+    print(mf_tot)
 
