@@ -6,7 +6,7 @@ setPlotpref()
 
 #I/O settings
 indir_fmt = "/pcprobes_{:s}_avg"
-probename = "BL_in"
+probename = "BL"
 fname_fmt = "{:s}.{:08d}.pcd"
 pos_name_fmt = "{:s}.pxyz"
 
@@ -16,6 +16,7 @@ casedir3 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_0125"
 indir = indir_fmt.format(probename)
 inputdir1 = casedir1+indir
 inputdir2 = casedir2+indir
+inputdir3 = casedir3+indir
 print(inputdir1)
 outdir = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/"
 
@@ -37,10 +38,12 @@ pos_name2 = os.path.join(inputdir2,pos_name)
 print(fname2)
 print(pos_name2)
 
-fname2 = os.path.join(inputdir2,fname2)
-pos_name2 = os.path.join(inputdir2,pos_name)
-print(fname2)
-print(pos_name2)
+tid3 = 54501
+fname3 = fname_fmt.format(probename,tid3)
+fname3 = os.path.join(inputdir3,fname3)
+pos_name3 = os.path.join(inputdir3,pos_name)
+print(fname3)
+print(pos_name3)
 #parameters from data
 Ny = 400
 Nz = 200
@@ -86,6 +89,7 @@ def readprobes(pos_name):
 
 
     lines = [line1_xyz, line2_xyz, line3_xyz, line4_xyz]
+    print(line1_xyz)
     line_inds = [line1_idx, line2_idx, line3_idx, line4_idx]
 
     return inds, xyz_pos, lines, line_inds
@@ -105,6 +109,54 @@ def readData(fname,line_inds,inds):
     u_rms_x = data_org[:,5]
     u_rms_y = data_org[:,6]
     u_rms_z = data_org[:,7]
+
+    u_avg_x1 = u_avg_x[line_inds[0]]
+    u_avg_x2 = u_avg_x[line_inds[1]]
+    u_avg_x3 = u_avg_x[line_inds[2]]
+    u_avg_x4 = u_avg_x[line_inds[3]]
+    """
+    print(line_inds[0])
+    plt.figure()
+    plt.plot(u_avg_x1)
+    plt.show()
+    """
+    u_rms_x1 = u_rms_x[line_inds[0]]
+    u_rms_x2 = u_rms_x[line_inds[1]]
+    u_rms_x3 = u_rms_x[line_inds[2]]
+    u_rms_x4 = u_rms_x[line_inds[3]]
+
+    u_rms_y1 = u_rms_y[line_inds[0]]
+    u_rms_y2 = u_rms_y[line_inds[1]]
+    u_rms_y3 = u_rms_y[line_inds[2]]
+    u_rms_y4 = u_rms_y[line_inds[3]]
+
+    u_rms_z1 = u_rms_z[line_inds[0]]
+    u_rms_z2 = u_rms_z[line_inds[1]]
+    u_rms_z3 = u_rms_z[line_inds[2]]
+    u_rms_z4 = u_rms_z[line_inds[3]]
+    
+    u_avg_x_lines =[u_avg_x1,u_avg_x2,u_avg_x3,u_avg_x4]
+    u_rms_x_lines =[u_rms_x1,u_rms_x2,u_rms_x3,u_rms_x4]
+    u_rms_y_lines =[u_rms_y1,u_rms_y2,u_rms_y3,u_rms_y4]
+    u_rms_z_lines =[u_rms_z1,u_rms_z2,u_rms_z3,u_rms_z4]
+
+    return u_avg_x_lines,u_rms_x_lines,u_rms_y_lines,u_rms_z_lines
+
+def readData1(fname,line_inds,inds):
+    #reading data from file
+    data = np.loadtxt(fname,skiprows=1)
+    num_prob = data.shape[0]
+    num_var  = data.shape[1]
+    data_org = np.zeros((num_prob,num_var),dtype=float)
+    data_org[inds,:] = data
+    #the data are
+    #avg(p), avg(rho), comp(avg(u),0), comp(avg(u),1), comp(avg(u),2), 
+    #comp(rms(u),0), comp(rms(u),1), comp(rms(u),2)
+    #grab only the streamwise velocity and rms data for now
+    u_avg_x = data_org[:,0]
+    u_rms_x = data_org[:,1]
+    u_rms_y = data_org[:,2]
+    u_rms_z = data_org[:,3]
 
     u_avg_x1 = u_avg_x[line_inds[0]]
     u_avg_x2 = u_avg_x[line_inds[1]]
@@ -182,13 +234,17 @@ def plotQuantities(lines,var_lines,var_name,label=""):
 
 def main():
     inds1,_,lines1,line_inds1 = readprobes(pos_name1)
+    print(lines1)
     u_avg_x_lines1,u_rms_x_lines1,u_rms_y_lines1,u_rms_z_lines1 = readData(fname1,line_inds1,inds1)
     #plotQuantities(lines1,u_avg_x_lines1,"u_avg_x","smooth")
-    plotQuantities(lines1,u_rms_x_lines1,"u_rms_x","smooth")
+    plotQuantities(lines1,u_avg_x_lines1,"u_avg_x","smooth")
     inds2,_,lines2,line_inds2 = readprobes(pos_name2)
     u_avg_x_lines2,u_rms_x_lines2,u_rms_y_lines2,u_rms_z_lines2 = readData(fname2,line_inds2,inds2)
     #plotQuantities(lines2,u_avg_x_lines2,"u_avg_x","rough 0.025h")
-    plotQuantities(lines2,u_rms_x_lines2,"u_rms_x","rough 0.025h")
+    plotQuantities(lines2,u_avg_x_lines2,"u_avg_x","rough 0.025h")
 
+    inds3,_,lines3,line_inds3 = readprobes(pos_name3)
+    u_avg_x_lines3,u_rms_x_lines3,u_rms_y_lines3,u_rms_z_lines3 = readData(fname3,line_inds3,inds3)
+    plotQuantities(lines3,u_avg_x_lines3,"u_avg_x","rough 0.0125h")
 if __name__ == "__main__":
     main()
