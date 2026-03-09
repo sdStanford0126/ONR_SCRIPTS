@@ -13,10 +13,13 @@ pos_name_fmt = "{:s}.pxyz"
 casedir1 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/smooth"
 casedir2 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_025"
 casedir3 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_0125"
+casedir4 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_01875"
+
 indir = indir_fmt.format(probename)
 inputdir1 = casedir1+indir
 inputdir2 = casedir2+indir
 inputdir3 = casedir3+indir
+inputdir4 = casedir4+indir
 print(inputdir1)
 outdir = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/"
 
@@ -44,6 +47,13 @@ fname3 = os.path.join(inputdir3,fname3)
 pos_name3 = os.path.join(inputdir3,pos_name)
 print(fname3)
 print(pos_name3)
+
+tid4 = 52501
+fname4 = fname_fmt.format(probename,tid4)
+fname4 = os.path.join(inputdir4,fname4)
+pos_name4 = os.path.join(inputdir4,pos_name)
+print(fname4)
+print(pos_name4)
 #parameters from data
 Ny = 400
 Nz = 200
@@ -246,5 +256,9 @@ def main():
     inds3,_,lines3,line_inds3 = readprobes(pos_name3)
     u_avg_x_lines3,u_rms_x_lines3,u_rms_y_lines3,u_rms_z_lines3 = readData(fname3,line_inds3,inds3)
     plotQuantities(lines3,u_avg_x_lines3,"u_avg_x","rough 0.0125h")
+
+    inds4,_,lines4,line_inds4 = readprobes(pos_name4)
+    u_avg_x_lines4,u_rms_x_lines4,u_rms_y_lines4,u_rms_z_lines4 = readData(fname4,line_inds4,inds4)
+    plotQuantities(lines4,u_avg_x_lines4,"u_avg_x","rough 0.01875h")
 if __name__ == "__main__":
     main()

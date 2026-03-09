@@ -115,7 +115,7 @@ if __name__ == "__main__":
     print(z.size)
     print(y.size)
     mf_avg = np.squeeze(np.mean(mf,axis=0))
-    mf_tot = np.trapz(np.trapz(mf,z),y)
+    mf_tot = np.trapezoid(np.trapezoid(mf,z),y)
     
     print(mf_tot)
 
