@@ -201,9 +201,11 @@ def readData1(fname,line_inds,inds):
     return u_avg_x_lines,u_rms_x_lines,u_rms_y_lines,u_rms_z_lines
 
 
-def plotQuantities(lines,var_lines,var_name,label=""):
+def plotQuantities(lines,var_lines,var_name,label="",prev_fig=0):
     #plot for all four lines the given quantity
     #for line 1/2
+    ind_offset = prev_fig * len(lines)
+    print("offset level", ind_offset)
     for ind, line_xyz in enumerate(lines):
         x = line_xyz[0,0]
         print(x)
@@ -211,7 +213,7 @@ def plotQuantities(lines,var_lines,var_name,label=""):
         if ind <2: #first two
             z = line_xyz[0,2]
             y = line_xyz[:,1]
-            plt.figure(ind)
+            plt.figure(ind + ind_offset)
             plt.tight_layout()
             title_name_fmt = "{:s}, at x/h={:.02f}, z/h={:.02f}"
             title_name = title_name_fmt.format(var_name,x,z)
@@ -228,7 +230,7 @@ def plotQuantities(lines,var_lines,var_name,label=""):
         else:
             z = line_xyz[:,2]
             y = line_xyz[0,1]
-            plt.figure(ind)
+            plt.figure(ind+ind_offset)
             plt.tight_layout()
             title_name_fmt = "{:s}, at $x/h={:.02f}, y/h=${:.02f}"
             title_name = title_name_fmt.format(var_name,x,y)
@@ -248,17 +250,21 @@ def main():
     u_avg_x_lines1,u_rms_x_lines1,u_rms_y_lines1,u_rms_z_lines1 = readData(fname1,line_inds1,inds1)
     #plotQuantities(lines1,u_avg_x_lines1,"u_avg_x","smooth")
     plotQuantities(lines1,u_avg_x_lines1,"u_avg_x","smooth")
+    plotQuantities(lines1,u_rms_x_lines1,"u_rms_x","smooth",prev_fig=1)
     inds2,_,lines2,line_inds2 = readprobes(pos_name2)
     u_avg_x_lines2,u_rms_x_lines2,u_rms_y_lines2,u_rms_z_lines2 = readData(fname2,line_inds2,inds2)
     #plotQuantities(lines2,u_avg_x_lines2,"u_avg_x","rough 0.025h")
-    plotQuantities(lines2,u_avg_x_lines2,"u_avg_x","rough 0.025h")
+    #plotQuantities(lines2,u_avg_x_lines2,"u_avg_x","rough 0.025h")
+    #plotQuantities(lines2,u_rms_x_lines2,"u_rms_x","rough 0.025h")
 
     inds3,_,lines3,line_inds3 = readprobes(pos_name3)
     u_avg_x_lines3,u_rms_x_lines3,u_rms_y_lines3,u_rms_z_lines3 = readData(fname3,line_inds3,inds3)
     plotQuantities(lines3,u_avg_x_lines3,"u_avg_x","rough 0.0125h")
+    plotQuantities(lines3,u_rms_x_lines3,"u_rms_x","rough 0.0125h",prev_fig=1)
 
     inds4,_,lines4,line_inds4 = readprobes(pos_name4)
     u_avg_x_lines4,u_rms_x_lines4,u_rms_y_lines4,u_rms_z_lines4 = readData(fname4,line_inds4,inds4)
     plotQuantities(lines4,u_avg_x_lines4,"u_avg_x","rough 0.01875h")
+    plotQuantities(lines4,u_rms_x_lines4,"u_rms_x","rough 0.01875h",prev_fig=1)
 if __name__ == "__main__":
     main()
