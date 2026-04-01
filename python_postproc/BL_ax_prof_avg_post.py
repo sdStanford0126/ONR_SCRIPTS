@@ -101,12 +101,12 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
 
 
 if __name__ == "__main__":
-    data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.0125/pcprobe_int_axprof"
+    data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.01875/pcprobe_int_axprof"
     posName = os.path.join(data_dir,"int_axprof.pxyz")
     fname_fmt = "int_axprof.{:08d}.pcd"
     DataName_fmt = os.path.join(data_dir,fname_fmt)
     print(xs)
-    u,rho,mf= extract_data(0,posName,DataName_fmt,54000,54500,50)
+    u,rho,mf= extract_data(0,posName,DataName_fmt,50000,52500,50)
     z_max = z_lim(0)
     z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
     print(mf.size)
@@ -117,5 +117,5 @@ if __name__ == "__main__":
     mf_avg = np.squeeze(np.mean(mf,axis=0))
     mf_tot = np.trapezoid(np.trapezoid(mf,z),y)
     
-    print(mf_tot)
+    print(np.mean(mf_tot))
 
