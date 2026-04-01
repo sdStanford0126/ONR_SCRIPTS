@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from Universal_Subroutines import setPlotpref
 import sys
 import os
+import h5py
 setPlotpref()
 """
 the goal of this script is to utilize the axial profile probes to do the following:
@@ -69,6 +70,45 @@ def readData(ind,DataName_fmt,tids,Nx,Ny,Nz):
     
     return u_t, v_t,w_t,p_t,T_t
 
+def readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname):
+    #inputs: 
+    #ind: index to align data to positioning
+    #DataName_fmt: format for the data
+    #tids: array of time steps to be read
+    #N{x,y,z}: number of points perlocation
+    #outputs:
+    #write to H5file
+    Nt = tids.size
+    Npts = Nx*Ny*Nz
+
+    f = h5py.File(h5Fname,"w")
+    u_t=f.create_dataset("u",(Nt,Nx,Ny,Nz),dtype='f')    
+    v_t=f.create_dataset("v",(Nt,Nx,Ny,Nz),dtype='f')    
+    w_t=f.create_dataset("w",(Nt,Nx,Ny,Nz),dtype='f')    
+    p_t=f.create_dataset("p",(Nt,Nx,Ny,Nz),dtype='f')    
+    T_t=f.create_dataset("T",(Nt,Nx,Ny,Nz),dtype='f')    
+
+    u_r = np.zeros((Npts))
+    v_r = np.zeros((Npts))
+    w_r = np.zeros((Npts))
+    p_r = np.zeros((Npts))
+    T_r = np.zeros((Npts))
+
+    for i,tid in enumerate(tids):
+        DataName = DataName_fmt.format(tid)
+        Data = np.loadtxt(DataName,skiprows=1)
+        u_r[ind] = Data[:,0]    
+        v_r[ind] = Data[:,1]    
+        w_r[ind] = Data[:,2]    
+        p_r[ind] = Data[:,3]    
+        T_r[ind] = Data[:,4]
+        u_t[i,:,:,:] = reformData(u_r,Nx,Ny,Nz)    
+        v_t[i,:,:,:] = reformData(v_r,Nx,Ny,Nz)    
+        w_t[i,:,:,:] = reformData(w_r,Nx,Ny,Nz)    
+        p_t[i,:,:,:] = reformData(p_r,Nx,Ny,Nz)    
+        T_t[i,:,:,:] = reformData(T_r,Nx,Ny,Nz)    
+    f.close()
+
 def reformData(Data,Nx,Ny,Nz):
     #restucture the geometry data
     #currently it is y first, x second, z last
@@ -119,10 +159,34 @@ def main():
     print("test output ", DataName_fmt.format(tid_str))
 
     u_t,v_t,w_t,p_t,T_t = readData(ind,DataName_fmt,tids,Nx,Ny,Nz)
+    h5Fname = "ax_prof_{:d}_{:d}.h5".format(tid_str,tid_end)
+    
+    h5Fname = os.path.join(out_dir,h5Fname)
+    print("h5 Fname test: ", h5Fname)
+    readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname)
+    
+    #test hdf5 plot
+    f = h5py.File(h5Fname,'r')
+    u_nt = f['u'][...]
+    f.close()
+    plt.figure()
+    plt.pcolor(Yu,Zu,u_nt[0,9,:,:])
+    plt.axis("equal")  
+    plt.savefig("ax_u_hdf_test.png")  
+    
+    #axial profile test plots
+    for i,x in enumerate(Xu):
+        plt.figure()
+        plt.pcolor(Yu,Zu,u_nt[0,i,:,:])
+        plt.axis("equal")
+        plt.savefig("ax_u_x_{:f}.png".format(x))
+
+
 
     #test plot
     plt.figure()
-    plt.pcolor(Yu,Zu,u_t[0,9,:,:])  
+    plt.pcolor(Yu,Zu,u_t[0,9,:,:])
+    plt.axis("equal")  
     plt.savefig("ax_u_test.png")  
 
     """
