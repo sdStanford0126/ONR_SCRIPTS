@@ -78,15 +78,17 @@ def readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname):
     #N{x,y,z}: number of points perlocation
     #outputs:
     #write to H5file
-    Nt = tids.size
     Npts = Nx*Ny*Nz
 
     f = h5py.File(h5Fname,"w")
-    u_t=f.create_dataset("u",(Nt,Nx,Ny,Nz),dtype='f')    
-    v_t=f.create_dataset("v",(Nt,Nx,Ny,Nz),dtype='f')    
-    w_t=f.create_dataset("w",(Nt,Nx,Ny,Nz),dtype='f')    
-    p_t=f.create_dataset("p",(Nt,Nx,Ny,Nz),dtype='f')    
-    T_t=f.create_dataset("T",(Nt,Nx,Ny,Nz),dtype='f')    
+    # Extendable datasets let us commit one input file (one timestep) at a time.
+    maxshape = (None, Nx, Ny, Nz)
+    chunks = (1, Nx, Ny, Nz)
+    u_t=f.create_dataset("u",(0,Nx,Ny,Nz),maxshape=maxshape,chunks=chunks,dtype='f')
+    v_t=f.create_dataset("v",(0,Nx,Ny,Nz),maxshape=maxshape,chunks=chunks,dtype='f')
+    w_t=f.create_dataset("w",(0,Nx,Ny,Nz),maxshape=maxshape,chunks=chunks,dtype='f')
+    p_t=f.create_dataset("p",(0,Nx,Ny,Nz),maxshape=maxshape,chunks=chunks,dtype='f')
+    T_t=f.create_dataset("T",(0,Nx,Ny,Nz),maxshape=maxshape,chunks=chunks,dtype='f')
 
     u_r = np.zeros((Npts))
     v_r = np.zeros((Npts))
@@ -97,6 +99,11 @@ def readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname):
     for i,tid in enumerate(tids):
         DataName = DataName_fmt.format(tid)
         Data = np.loadtxt(DataName,skiprows=1)
+        u_t.resize(i+1,axis=0)
+        v_t.resize(i+1,axis=0)
+        w_t.resize(i+1,axis=0)
+        p_t.resize(i+1,axis=0)
+        T_t.resize(i+1,axis=0)
         u_r[ind] = Data[:,0]    
         v_r[ind] = Data[:,1]    
         w_r[ind] = Data[:,2]    
@@ -106,7 +113,8 @@ def readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname):
         v_t[i,:,:,:] = reformData(v_r,Nx,Ny,Nz)    
         w_t[i,:,:,:] = reformData(w_r,Nx,Ny,Nz)    
         p_t[i,:,:,:] = reformData(p_r,Nx,Ny,Nz)    
-        T_t[i,:,:,:] = reformData(T_r,Nx,Ny,Nz)    
+        T_t[i,:,:,:] = reformData(T_r,Nx,Ny,Nz)
+        f.flush()
     f.close()
 
 def reformData(Data,Nx,Ny,Nz):
