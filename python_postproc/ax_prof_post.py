@@ -180,7 +180,7 @@ def main():
     print("h5 Fname test: ", h5Fname)
     readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname)
     """
-    """    
+    """
     #test hdf5 plot
     f = h5py.File(h5Fname,'r')
     u_nt = f['u'][...]
@@ -189,7 +189,9 @@ def main():
     plt.pcolor(Yu,Zu,u_nt[0,9,:,:])
     plt.axis("equal")  
     plt.savefig("ax_u_hdf_test.png")  
-    
+    """
+
+    """
     #axial profile test plots
     for i,x in enumerate(Xu):
         plt.figure()
