@@ -153,10 +153,11 @@ def main():
     dt = 50
     tids = np.arange(tid_str,tid_end+dt,dt)
     print(tids[:51])
-
+    #read and write data to h5 structured data
     DataName_fmt = "axial.{:08d}.pcd"
     DataName_fmt = os.path.join(data_dir,DataName_fmt)
     h5Fname = "ax_prof_{:d}_{:d}.h5".format(tid_str,tid_end)
+    h5Fname = os.path.join(out_dir,h5Fname)
     readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname)
 
     """ 
