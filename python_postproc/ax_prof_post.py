@@ -148,12 +148,18 @@ def main():
     Xf = reformData(X,Nx,Ny,Nz)
     Yf = reformData(Y,Nx,Ny,Nz)
     Zf = reformData(Z,Nx,Ny,Nz)
-    tid_str = 249400
+    tid_str = 50
     tid_end = 249800
     dt = 50
     tids = np.arange(tid_str,tid_end+dt,dt)
     print(tids[:51])
 
+    DataName_fmt = "axial.{:08d}.pcd"
+    DataName_fmt = os.path.join(data_dir,DataName_fmt)
+    h5Fname = "ax_prof_{:d}_{:d}.h5".format(tid_str,tid_end)
+    readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname)
+
+    """ 
     DataName_fmt = "axial.{:08d}.pcd"
     DataName_fmt = os.path.join(data_dir,DataName_fmt)
     print("test output ", DataName_fmt.format(tid_str))
@@ -164,7 +170,8 @@ def main():
     h5Fname = os.path.join(out_dir,h5Fname)
     print("h5 Fname test: ", h5Fname)
     readWriteData(ind,DataName_fmt,tids,Nx,Ny,Nz,h5Fname)
-    
+    """
+    """    
     #test hdf5 plot
     f = h5py.File(h5Fname,'r')
     u_nt = f['u'][...]
@@ -180,15 +187,15 @@ def main():
         plt.pcolor(Yu,Zu,u_nt[0,i,:,:])
         plt.axis("equal")
         plt.savefig("ax_u_x_{:f}.png".format(x))
+    """
 
-
-
+    """
     #test plot
     plt.figure()
     plt.pcolor(Yu,Zu,u_t[0,9,:,:])
     plt.axis("equal")  
     plt.savefig("ax_u_test.png")  
-
+    """
     """
     #test reformData
     plt.figure()
