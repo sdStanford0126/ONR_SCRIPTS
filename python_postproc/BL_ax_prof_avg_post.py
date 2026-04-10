@@ -50,6 +50,23 @@ print("total probe pts:", np.sum(Ny*Nzs))
 # that plane and organize them in the y,z plane
 
 def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
+    """
+    INPUT: x: x position
+           posName: .pxyz file name
+           DataName_fmt: .pcd file name format (takes in INT tid to generate DataName)
+           tid_str: starting tid
+           tid_end: ending tid
+           dt: step size between samples
+
+    OUPUT:  
+            ALL OUTPUTS ARE 3D ARRAYS, FIRST INDEX IN TIME, SECOND INDEX IN Y, THIRD INDEX IN Z
+            u: x velocity component
+            v: y velocity component
+            w: z velocity component
+            p: pressure
+            rho: density
+            mf: rho*u (mass flux)
+    """ 
     #grab position data    
     Pos=np.loadtxt(posName,skiprows=1)
     ind=Pos[:,0]
@@ -64,6 +81,7 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
     X[ind]  =Xr
     Y[ind]  =Yr
     Z[ind]  =Zr
+    """
     #print("data size", Npts)
     #print("expected data size", np.sum(np.fromiter((Ny*Nz for Nz in Nzs),int)))
     #plt.figure()
@@ -72,6 +90,7 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
     #plt.plot(Z)
     #plt.savefig("test.png")
     # grab time series data from the given x position
+    """
     X_ind = np.where(np.abs(X-x) < 1e-6)
     Nz = findNz(x,delta)
     print(X_ind[0].size)
@@ -80,9 +99,6 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
     tids = np.arange(tid_str,tid_end,dt)
     Nt = np.size(tids)
     u  = np.zeros((Nt,Ny,Nz))
-    v  = np.zeros((Nt,Ny,Nz))
-    w  = np.zeros((Nt,Ny,Nz))
-    p  = np.zeros((Nt,Ny,Nz))
     rho  = np.zeros((Nt,Ny,Nz))
     for i,tid in enumerate(tids):
         DataName = DataName_fmt.format(int(tid))
@@ -102,33 +118,17 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
     mf = u*rho
     return u,v,w,p,rho,mf
    
-#TODO: plot various profile data at the 4 different lines defined with in BL_probes and assmemble these quantities
-#Avarilable quantities, by order are:
-#u,v,w,p,rho
-#we would like to at least assemble the following:
-#avg(u) profile, avg(u'v'), avg(u'w'), 
-def plotTurbProf_C(u,v,w,y,z):
-    """
-    takes in time history and the 1d y,z vector and produces the following profiles
-    u_avg over y centerline (major axis)
-    u_avg over z centerline (minor axis)
-    u'v'
-    """
+    
 
-def evalMfAvg(mf,z,y):
-    mf_avg = np.squeeze(np.mean(mf,axis=0))
-    mf_tot = np.trapezoid(np.trapezoid(mf,z),y)
-    mf_tot = np.mean(mf_tot) 
-    return mf_tot
+
 
 if __name__ == "__main__":
-    #these are for test purposes
-    data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.025/pcprobe_int_axprof"
+    data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.01875/pcprobe_int_axprof"
     posName = os.path.join(data_dir,"int_axprof.pxyz")
     fname_fmt = "int_axprof.{:08d}.pcd"
     DataName_fmt = os.path.join(data_dir,fname_fmt)
     print(xs)
-    u,v,w,p,rho,mf= extract_data(0,posName,DataName_fmt,143000,163000,50)
+    u,v,w,p,rho,mf= extract_data(0,posName,DataName_fmt,50000,52500,50)
     z_max = z_lim(0)
     z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
     print(mf.size)
@@ -136,6 +136,8 @@ if __name__ == "__main__":
     print(y.size * z.size)
     print(z.size)
     print(y.size)
-    print(evalMfAvg(mf,z,y))
-    out_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.01875/pcprobe_int_axprof" 
+    mf_avg = np.squeeze(np.mean(mf,axis=0))
+    mf_tot = np.trapezoid(np.trapezoid(mf,z),y)
+    
+    print(np.mean(mf_tot))
 

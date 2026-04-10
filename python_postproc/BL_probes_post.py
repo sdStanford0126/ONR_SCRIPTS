@@ -4,57 +4,6 @@ import matplotlib.pyplot as plt
 from Universal_Subroutines import setPlotpref
 setPlotpref()
 
-#I/O settings
-indir_fmt = "/pcprobes_{:s}_avg"
-probename = "BL"
-fname_fmt = "{:s}.{:08d}.pcd"
-pos_name_fmt = "{:s}.pxyz"
-
-casedir1 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/smooth"
-casedir2 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_025"
-casedir3 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_0125"
-casedir4 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_01875"
-
-indir = indir_fmt.format(probename)
-inputdir1 = casedir1+indir
-inputdir2 = casedir2+indir
-inputdir3 = casedir3+indir
-inputdir4 = casedir4+indir
-print(inputdir1)
-outdir = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/"
-
-tid1 = 168500
-fname1 = fname_fmt.format(probename,tid1)
-pos_name = pos_name_fmt.format(probename)
-
-
-tid2 = 109001
-fname2 = fname_fmt.format(probename,tid2)
-
-fname1 = os.path.join(inputdir1,fname1)
-pos_name1 = os.path.join(inputdir1,pos_name)
-print(fname1)
-print(pos_name1)
-
-fname2 = os.path.join(inputdir2,fname2)
-pos_name2 = os.path.join(inputdir2,pos_name)
-print(fname2)
-print(pos_name2)
-
-tid3 = 54501
-fname3 = fname_fmt.format(probename,tid3)
-fname3 = os.path.join(inputdir3,fname3)
-pos_name3 = os.path.join(inputdir3,pos_name)
-print(fname3)
-print(pos_name3)
-
-tid4 = 52501
-fname4 = fname_fmt.format(probename,tid4)
-fname4 = os.path.join(inputdir4,fname4)
-pos_name4 = os.path.join(inputdir4,pos_name)
-print(fname4)
-print(pos_name4)
-#parameters from data
 Ny = 400
 Nz = 200
 
@@ -245,7 +194,63 @@ def plotQuantities(lines,var_lines,var_name,label="",prev_fig=0):
 
 
 def main():
+    
+    
+    #I/O settings
+    indir_fmt = "/pcprobes_{:s}_avg"
+    probename = "BL"
+    fname_fmt = "{:s}.{:08d}.pcd"
+    pos_name_fmt = "{:s}.pxyz"
+    
+    casedir1 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/smooth"
+    casedir2 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_025"
+    casedir3 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_0125"
+    casedir4 = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/0_01875"
+    
+    indir = indir_fmt.format(probename)
+    inputdir1 = casedir1+indir
+    inputdir2 = casedir2+indir
+    inputdir3 = casedir3+indir
+    inputdir4 = casedir4+indir
+    print(inputdir1)
+    outdir = "/Users/steven/OneDrive/Stanford/ONR project/results/BL_test/"
+    
+    tid1 = 168500
+    fname1 = fname_fmt.format(probename,tid1)
+    pos_name = pos_name_fmt.format(probename)
+    
+    
+    tid2 = 109001
+    fname2 = fname_fmt.format(probename,tid2)
+    
+    fname1 = os.path.join(inputdir1,fname1)
+    pos_name1 = os.path.join(inputdir1,pos_name)
+    print(fname1)
+    print(pos_name1)
+    
+    fname2 = os.path.join(inputdir2,fname2)
+    pos_name2 = os.path.join(inputdir2,pos_name)
+    print(fname2)
+    print(pos_name2)
+    
+    tid3 = 54501
+    fname3 = fname_fmt.format(probename,tid3)
+    fname3 = os.path.join(inputdir3,fname3)
+    pos_name3 = os.path.join(inputdir3,pos_name)
+    print(fname3)
+    print(pos_name3)
+    
+    tid4 = 52501
+    fname4 = fname_fmt.format(probename,tid4)
+    fname4 = os.path.join(inputdir4,fname4)
+    pos_name4 = os.path.join(inputdir4,pos_name)
+    print(fname4)
+    print(pos_name4)
+    #parameters from data
+        
+        
     inds1,_,lines1,line_inds1 = readprobes(pos_name1)
+
     print(lines1)
     u_avg_x_lines1,u_rms_x_lines1,u_rms_y_lines1,u_rms_z_lines1 = readData(fname1,line_inds1,inds1)
     #plotQuantities(lines1,u_avg_x_lines1,"u_avg_x","smooth")
