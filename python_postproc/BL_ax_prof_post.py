@@ -96,9 +96,11 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
     mf = u*rho
     return u,rho,mf
    
-    
-
-
+#TODO: plot various profile data at the 4 different lines defined with in BL_probes and assmemble these quantities
+#Avarilable quantities, by order are:
+#u,v,w,p,rho
+#we would like to at least assemble the following:
+#avg(u) profile, avg(u'v'), avg(u'w'), 
 
 if __name__ == "__main__":
     data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.01875/pcprobe_int_axprof"
