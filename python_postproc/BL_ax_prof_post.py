@@ -107,13 +107,90 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
 #u,v,w,p,rho
 #we would like to at least assemble the following:
 #avg(u) profile, avg(u'v'), avg(u'w'), 
-def plotTurbProf_C(u,v,w,y,z):
+def plotTurbProf_C(u,v,w,xc,y,z, out_dir = "./",eps=delta/2.0):
     """
     takes in time history and the 1d y,z vector and produces the following profiles
     u_avg over y centerline (major axis)
     u_avg over z centerline (minor axis)
-    u'v'
+    u'v' over y centerline (major axis)
+    u'w' over z centerline (minor axis)
+    tke over y centerline (major axis)
+    tke over z centerline (minor axis)
     """
+    #find centerline 
+    y_ind = np.where(np.abs(y) < eps)
+    z_ind = np.where(np.abs(z) < eps)
+    y_ind = y_ind[0]
+    z_ind = z_ind[0]
+    #debug (print loc)
+    print(y[y_ind])
+    print(z[z_ind])
+    
+    #get time averages
+    u_avg = np.mean(u,axis=0)
+    v_avg = np.mean(v,axis=0)
+    w_avg = np.mean(w,axis=0)
+    #print(u_avg.shape)
+
+    #get flucutations
+    uf   = u - u_avg
+    vf   = v - v_avg
+    wf   = w - w_avg
+
+    u_avg_y = u_avg[:,z_ind]
+    #print("u_avg_y_size: ",u_avg_y.size)
+    #print("y: ",y.size)
+    u_avg_z = u_avg[y_ind,:]     
+    #print("u_avg_z_size: ",u_avg_z.size)
+    #print("y: ",z.size)
+
+    #build fluctuation
+    ufvf_avg = np.mean(uf*vf,axis=0)
+    ufvf_avg_y = ufvf_avg[:,z_ind]
+
+    ufwf_avg = np.mean(uf*wf, axis=0)
+    ufwf_avg_z = ufwf_avg[y_ind,:]
+
+
+    PlotName_fmt = "{}_{}.png"
+    PlotName_fmt = os.path.join(out_dir, PlotName_fmt)
+    #u_avg_y
+    fig_id = 1
+    var_label = "u_avg"
+    side_label = "y"
+    PlotName = PlotName_fmt.format(var_label,side_label)
+    plotProfile(xc,y,u_avg_y,r"$\overline{u}$", side_label,PlotName,fig_id)
+
+    
+    #u_avg_z
+    fig_id = 2
+    var_label = "u_avg"
+    side_label = "z"
+    PlotName = PlotName_fmt.format(var_label,side_label)
+    plotProfile(xc,z,u_avg_z,r"$\overline{u}$", side_label,PlotName,fig_id)
+
+    #ufvf_avg_y
+    fig_id = 3
+    var_label = "ufvf_avg"
+    side_label = "y"
+    PlotName = PlotName_fmt.format(var_label,side_label)
+    plotProfile(xc,y,ufvf_avg_y,r"$\overline{u}$", side_label,PlotName,fig_id)
+
+    #ufvf_avg_z
+    fig_id = 3
+    var_label = "ufvf_avg"
+    side_label = "y"
+    PlotName = PlotName_fmt.format(var_label,side_label)
+    plotProfile(xc,y,ufvf_avg_y,r"$\overline{u}$", side_label,PlotName,fig_id)
+
+def plotProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id):
+    plt.figure(fig_id)
+    plt.plot(pos,var, label = "x = %.2f" % xc)
+    plt.xlabel(var_label)
+    plt.ylabel(side_label)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(PlotName, dpi = 300, bbox_inches="tight")
 
 def evalMfAvg(mf,z,y):
     mf_avg = np.squeeze(np.mean(mf,axis=0))
@@ -128,8 +205,9 @@ if __name__ == "__main__":
     fname_fmt = "int_axprof.{:08d}.pcd"
     DataName_fmt = os.path.join(data_dir,fname_fmt)
     print(xs)
-    u,v,w,p,rho,mf= extract_data(0,posName,DataName_fmt,143000,163000,50)
+    u,v,w,p,rho,mf= extract_data(0,posName,DataName_fmt,162200,163000,50)
     z_max = z_lim(0)
+    #print(y)
     z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
     print(mf.size)
     print(mf.shape)
@@ -137,5 +215,15 @@ if __name__ == "__main__":
     print(z.size)
     print(y.size)
     print(evalMfAvg(mf,z,y))
-    out_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.01875/pcprobe_int_axprof" 
+    out_dir = "/anvil/scratch/x-sdai/"
+    plotTurbProf_C(u,v,w,0,y,z) 
+
+    for x in xs:
+        u,v,w,p,rho,mf= extract_data(x,posName,DataName_fmt,162200,163000,50)
+        z_max = z_lim(x)
+        #print(y)
+        z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
+        print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
+        plotTurbProf_C(u,v,w,x,y,z)
+
 
