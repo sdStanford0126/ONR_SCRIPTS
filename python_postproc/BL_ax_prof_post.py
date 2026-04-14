@@ -137,19 +137,19 @@ def plotTurbProf_C(u,v,w,xc,y,z, out_dir = "./",eps=delta/2.0):
     vf   = v - v_avg
     wf   = w - w_avg
 
-    u_avg_y = u_avg[:,z_ind]
+    u_avg_y = np.squeeze(u_avg[:,z_ind])
     #print("u_avg_y_size: ",u_avg_y.size)
     #print("y: ",y.size)
-    u_avg_z = u_avg[y_ind,:]     
+    u_avg_z = np.squeeze(u_avg[y_ind,:])     
     #print("u_avg_z_size: ",u_avg_z.size)
     #print("y: ",z.size)
 
     #build fluctuation
     ufvf_avg = np.mean(uf*vf,axis=0)
-    ufvf_avg_y = ufvf_avg[:,z_ind]
+    ufvf_avg_y = np.squeeze(ufvf_avg[:,z_ind])
 
     ufwf_avg = np.mean(uf*wf, axis=0)
-    ufwf_avg_z = ufwf_avg[y_ind,:]
+    ufwf_avg_z = np.squeeze(ufwf_avg[y_ind,:])
 
 
     PlotName_fmt = "{}_{}.png"
