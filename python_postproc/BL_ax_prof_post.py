@@ -3,7 +3,7 @@
 import os 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from tqdm import tqdm
 L = 2.56 #baselength
 LEVEL=9 #mesh refinement level
 delta = L/2**LEVEL
@@ -86,7 +86,7 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
     rho  = np.zeros((Nt,Ny,Nz))
     for i,tid in enumerate(tids):
         DataName = DataName_fmt.format(int(tid))
-        print(DataName)
+        #print(DataName)
         DataR = np.loadtxt(DataName,skiprows=1)
         DataRo = np.zeros(np.shape(DataR))
         DataRo[ind,:]=DataR[:,:]
@@ -107,9 +107,9 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt):
 #u,v,w,p,rho
 #we would like to at least assemble the following:
 #avg(u) profile, avg(u'v'), avg(u'w'), 
-def plotTurbProf_C(u,v,w,xc,y,z, out_dir = "./",eps=delta/2.0):
+def plotTurbProf_C(u,v,w,xc,y,z, out_dir = "./",eps=delta/2.0, fig_offset=0):
     """
-    takes in time history and the 1d y,z vector and produces the following profiles
+    takes in time history and the 1d y,z vector and produces the following profiles at given streamwise station x = xc
     u_avg over y centerline (major axis)
     u_avg over z centerline (minor axis)
     u'v' over y centerline (major axis)
@@ -155,7 +155,7 @@ def plotTurbProf_C(u,v,w,xc,y,z, out_dir = "./",eps=delta/2.0):
     PlotName_fmt = "{}_{}.png"
     PlotName_fmt = os.path.join(out_dir, PlotName_fmt)
     #u_avg_y
-    fig_id = 1
+    fig_id = 0 + 4*fig_offset
     var_label = "u_avg"
     side_label = "y"
     PlotName = PlotName_fmt.format(var_label,side_label)
@@ -163,31 +163,31 @@ def plotTurbProf_C(u,v,w,xc,y,z, out_dir = "./",eps=delta/2.0):
 
     
     #u_avg_z
-    fig_id = 2
+    fig_id = 1 + 4*fig_offset
     var_label = "u_avg"
     side_label = "z"
     PlotName = PlotName_fmt.format(var_label,side_label)
     plotProfile(xc,z,u_avg_z,r"$\overline{u}$", side_label,PlotName,fig_id)
 
     #ufvf_avg_y
-    fig_id = 3
+    fig_id = 2+4*fig_offset
     var_label = "ufvf_avg"
     side_label = "y"
     PlotName = PlotName_fmt.format(var_label,side_label)
     plotProfile(xc,y,ufvf_avg_y,r"$\overline{u}$", side_label,PlotName,fig_id)
 
-    #ufvf_avg_z
-    fig_id = 3
-    var_label = "ufvf_avg"
-    side_label = "y"
+    #ufwf_avg_z
+    fig_id = 3 + 4*fig_offset
+    var_label = "ufwf_avg"
+    side_label = "z"
     PlotName = PlotName_fmt.format(var_label,side_label)
-    plotProfile(xc,y,ufvf_avg_y,r"$\overline{u}$", side_label,PlotName,fig_id)
+    plotProfile(xc,z,ufwf_avg_z,r"$\overline{u'w'}$", side_label,PlotName,fig_id)
 
 def plotProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id):
     plt.figure(fig_id)
-    plt.plot(pos,var, label = "x = %.2f" % xc)
-    plt.xlabel(var_label)
-    plt.ylabel(side_label)
+    plt.plot(var,pos, label = "x = %.2f" % xc)
+    plt.xlabel(side_label)
+    plt.ylabel(var_label)
     plt.legend()
     plt.tight_layout()
     plt.savefig(PlotName, dpi = 300, bbox_inches="tight")
@@ -200,30 +200,37 @@ def evalMfAvg(mf,z,y):
 
 if __name__ == "__main__":
     #these are for test purposes
-    data_dir = "/anvil/scratch/x-sdai/BL_test_baseline_0.025/pcprobe_int_axprof"
-    posName = os.path.join(data_dir,"int_axprof.pxyz")
-    fname_fmt = "int_axprof.{:08d}.pcd"
-    DataName_fmt = os.path.join(data_dir,fname_fmt)
-    print(xs)
-    u,v,w,p,rho,mf= extract_data(0,posName,DataName_fmt,162200,163000,50)
-    z_max = z_lim(0)
-    #print(y)
-    z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
-    print(mf.size)
-    print(mf.shape)
-    print(y.size * z.size)
-    print(z.size)
-    print(y.size)
-    print(evalMfAvg(mf,z,y))
-    out_dir = "/anvil/scratch/x-sdai/"
-    plotTurbProf_C(u,v,w,0,y,z) 
+    #TBL_test_cases = ["0.0125", "0.01875", "0.025"]
+    #tid_str_cases  = [20000, 20000, 130000]
+    #tid_end_cases  = [50000, 50000, 160000]
 
-    for x in xs:
-        u,v,w,p,rho,mf= extract_data(x,posName,DataName_fmt,162200,163000,50)
-        z_max = z_lim(x)
-        #print(y)
+    TBL_test_cases = ["0.025"]
+    tid_str_cases  = [130000]
+    tid_end_cases  = [160000]
+    data_dir_fmt = "/anvil/scratch/x-sdai/BL_test_baseline_{:s}/pcprobe_int_axprof"
+    out_dir_fmt = "/anvil/scratch/x-sdai/BL_post_proc/BL_{:s}"
+    for i, case in enumerate(TBL_test_cases):
+        print("Now processing for TBL case: ", case)
+        data_dir = data_dir_fmt.format(case)
+        print(xs)
+        z_max = z_lim(0)
         z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
-        print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
-        plotTurbProf_C(u,v,w,x,y,z)
+        out_dir = out_dir_fmt.format(case)
+        posName = os.path.join(data_dir,"int_axprof.pxyz")
+        fname_fmt = "int_axprof.{:08d}.pcd"
+        DataName_fmt = os.path.join(data_dir,fname_fmt)
+        tid_str = tid_str_cases[i]
+        tid_end = tid_end_cases[i]
+        for x in xs:
+            u,v,w,p,rho,mf= extract_data(x,posName,DataName_fmt,tid_str,tid_end,50)
+            z_max = z_lim(x)
+            #print(y)
+            z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
+            print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
+            plotTurbProf_C(u,v,w,x,y,z,out_dir = out_dir)
+
+    #load baseline h5 make the same plots based using the same functions
+    #need to supply new x,y,z
+    #grab x slices
 
 
