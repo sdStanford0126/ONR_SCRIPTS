@@ -23,8 +23,9 @@ def z_lim(x):
     return z_lim
 
 xyz_all = []
-
-xs = np.linspace(-1,0,11)
+Nx = 101 #int(np.ceil((x_end - x_str)/delta)) #this leads to 1.1G of position data
+print("Nx is: ", Nx)
+xs = np.linspace(-1,0,Nx)
 y = np.arange(-(1.0 - delta / 2.0), (1.0 - delta / 2.0) + delta * 0.5, delta)
 
 for x in xs:
@@ -42,8 +43,9 @@ for x in xs:
 xyz_comb = np.vstack(xyz_all)
 print("yz_count:", yz_count)
 
-outdir = "/Users/steven/OneDrive/Stanford/ONR project/Simulations Utilities" 
-fname = "BL_interior_axprof.txt"
+#outdir = "/Users/steven/OneDrive/Stanford/ONR project/Simulations Utilities" 
+outdir = "/anvil/scratch/x-sdai/" 
+fname = "noz_interior_axprof_Apr26.txt" #for runs done by akhil
 header = f"x y z  # BL probes, delta={delta}, Nlayer={xs.size}, Ny={y.size}, Nz=varied"
 outpath = os.path.join(outdir,fname)
 np.savetxt(outpath,xyz_comb,delimiter=" ", header=header)
