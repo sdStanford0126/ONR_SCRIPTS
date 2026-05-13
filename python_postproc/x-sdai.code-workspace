@@ -1,10 +1,10 @@
 {
 	"folders": [
 		{
-			"path": "../../../../anvil/scratch/x-sdai"
+			"path": ".."
 		},
 		{
-			"path": ".."
+			"path": "../../../../anvil/scratch/x-sdai"
 		}
 	],
 	"settings": {}

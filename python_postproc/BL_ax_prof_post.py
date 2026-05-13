@@ -482,6 +482,7 @@ def main():
             print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
             plotTurbProf_C(u,v,w,rho,p,x,y,z,out_dir = out_dir)
             plotAxialProf(x,np.mean(u,axis=0),z,y,"u_avg",out_dir)
+            plotAxialProf(x,np.mean(p,axis=0),z,y,"p_avg",out_dir)
             plotAxialProf(x,np.mean(u,axis=0)/np.mean(c,axis=0),z,y,"Mach_u",out_dir,var_lim=(0,1.5))
 
             
