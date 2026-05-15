@@ -1,2 +1,4 @@
+#ignore hidden files
+.*
 #ignore pictures
 *.png
