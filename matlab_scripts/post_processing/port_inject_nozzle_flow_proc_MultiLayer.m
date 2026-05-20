@@ -17,7 +17,7 @@ clear;clc;close all; setPlotPref(1.4,'latex',14); format long
 
 %% section a1: get the outlet plane data
 % I/O
-indir = "/Volumes/T7 Shield/ONR_proj_result/port/217M/" %on MacOS, may need to shift to Linux as needed
+indir = "/anvil/scratch/x-sdai/AR2_port_198M_V9/" %on MacOS, may need to shift to Linux as needed
 outdir = indir; %store at same location for now
 
 % %% flux base outlet plane data
@@ -115,8 +115,8 @@ Nx = 25;
 Ny = 45;
 Nz = 5; 
 
-tid_start = 750;
-tid_end   = 402750;
+tid_start = 300;
+tid_end   = 580100;
 step      = 750;
 dt        = 2.0e-4;
 
@@ -374,7 +374,7 @@ s1.FaceColor="interp";
 xlabel("$y$")
 ylabel("$z$")
 cb = colorbar; clim([0,1.4]); axis equal;ylim([-0.5,0.5]);xlim([-1,1]);
-ylabel(cb,"$\frac{u}{c_{\infty}}$",interpreter='latex',FontSize=16,Rotation=0)
+ylabel(cb,"$\frac{u}{c_{\infty}}$","interpreter","latex","FontSize",16,"Rotation",0)
 saveas(gcf, outdir+"port_outlet_u_profile.png")
 
 %plot pressure profile
@@ -388,7 +388,7 @@ s2.FaceColor="interp";
 xlabel("$y$")
 ylabel("$z$")
 cb = colorbar; clim([0,1.4]); axis equal;ylim([-0.5,0.5]);xlim([-1,1]);
-ylabel(cb,"$\frac{p}{\rho_{\infty}c_{\infty}^2}$",interpreter='latex',FontSize=16,Rotation=0)
+ylabel(cb,"$\frac{p}{\rho_{\infty}c_{\infty}^2}$","interpreter","latex","FontSize",16,"Rotation",0)
 saveas(gcf, outdir+"port_outlet_p_profile.png")
 
 

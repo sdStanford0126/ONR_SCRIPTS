@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from mpi4py import MPI
+#from mpi4py import MPI
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 L = 2.56 #baselength
@@ -446,17 +446,17 @@ def plotAxialProf(xc,var,z,y,var_label:str,out_dir,var_lim=None):
     
 def main():
         #these are for test purposes
-    #TBL_test_cases = ["0.0125", "0.01875", "0.025"]
-    #tid_str_cases  = [40000, 40000, 130000]
-    #tid_end_cases  = [100000, 100000, 190000]
+    TBL_test_cases = ["0.0125", "0.01875", "0.025"]
+    tid_str_cases  = [40000, 40000, 130000]
+    tid_end_cases  = [100000, 100000, 190000]
 
-    TBL_test_cases = ["0.025"]
-    tid_str_cases  = [155000]
-    tid_end_cases  = [160000]
+    #TBL_test_cases = ["0.025"]
+    #tid_str_cases  = [155000]
+    #tid_end_cases  = [160000]
     data_dir_fmt = "/anvil/scratch/x-sdai/BL_test_baseline_{:s}/pcprobe_int_axprof"
     out_dir_fmt = "/anvil/scratch/x-sdai/BL_post_proc/BL_{:s}"
      
-    cpus = 4
+    cpus = int(os.getenv("SLURM_NTASKS"))
     print("assigned core count: ", cpus)
     for i, case in enumerate(TBL_test_cases):
         plt.close('all')
