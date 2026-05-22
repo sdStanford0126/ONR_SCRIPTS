@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import h5py
 #from mpi4py import MPI
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,10 +23,10 @@ z_end = 0.5
 slope = (z_end-z_str)/(x_end-x_str)
 
 #old version (used for BL_test_<roughness_height>)
-#xs = np.linspace(-1,0,5)
+xs = np.linspace(-1,0,5)
 #new version (used for AR2_base_<*>)
-Nx = 101 
-xs = np.linspace(-1,0,Nx) #direct defined from write_BL_interior_probes.py
+#Nx = 101 
+#xs = np.linspace(-1,0,Nx) #direct defined from write_BL_interior_probes.py
 
 y = np.arange(-(1.0 - delta / 2.0), (1.0 - delta / 2.0) + delta * 0.5, delta)
 #thermodymaics reference for Power-Law viscosity
@@ -69,6 +70,23 @@ def _load_timestep(DataName_fmt, tid, ind, X_ind, Ny, Nz):
         np.reshape(DataRo[X_ind[0], 2], (Ny, Nz)),
         np.reshape(DataRo[X_ind[0], 3], (Ny, Nz)),
         np.reshape(DataRo[X_ind[0], 4], (Ny, Nz)),
+    )
+
+def _load_timestep_grad(DataName_fmt, tid, ind, X_ind, Ny, Nz):
+    # columns: grad_rho_x(0) grad_rho_y(1) grad_rho_z(2) u(3) v(4) w(5) p(6) rho(7)
+    DataName = DataName_fmt.format(int(tid))
+    DataR = np.loadtxt(DataName, skiprows=1)
+    DataRo = np.zeros(np.shape(DataR))
+    DataRo[ind, :] = DataR[:, :]
+    return (
+        np.reshape(DataRo[X_ind[0], 0], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 1], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 2], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 3], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 4], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 5], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 6], (Ny, Nz)),
+        np.reshape(DataRo[X_ind[0], 7], (Ny, Nz)),
     )
 
 #first need to get index from .pxyz and record x,y,z locatiions (no read original probe file)
@@ -147,6 +165,7 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt,max_workers=None):
     print(Nz*Ny)
     #now read data
     tids = np.arange(tid_str,tid_end,dt)
+    tids = tids.astype(int) #type cast to int
     Nt = np.size(tids)
     u  = np.zeros((Nt,Ny,Nz))
     v  = np.zeros((Nt,Ny,Nz))
@@ -162,11 +181,182 @@ def extract_data(x,posName,DataName_fmt,tid_str,tid_end,dt,max_workers=None):
             u[i], v[i], w[i], p[i], rho[i] = future.result()
         
     
-    print(u.size)    
+    print(u.size)
     print(Nt*Ny*Nz)
     mf = u*rho
     return u,v,w,p,rho,mf
-   
+
+def extract_data_grad(x, posName, DataName_fmt, tid_str, tid_end, dt, max_workers=None):
+    # columns in .pcd: grad_rho_x(0) grad_rho_y(1) grad_rho_z(2) u(3) v(4) w(5) p(6) rho(7)
+    Pos  = np.loadtxt(posName, skiprows=1)
+    ind  = Pos[:, 0].astype(int)
+    Npts = np.size(ind)
+    X    = np.zeros(Npts)
+    X[ind] = Pos[:, 1]
+
+    X_ind = np.where(np.abs(X - x) < 1e-6)
+    Nz    = findNz(x, delta)
+    print(X_ind[0].size)
+    print(Nz * Ny)
+
+    tids = np.arange(tid_str, tid_end, dt).astype(int)
+    Nt   = np.size(tids)
+    grad_rho_x = np.zeros((Nt, Ny, Nz))
+    grad_rho_y = np.zeros((Nt, Ny, Nz))
+    grad_rho_z = np.zeros((Nt, Ny, Nz))
+    u          = np.zeros((Nt, Ny, Nz))
+    v          = np.zeros((Nt, Ny, Nz))
+    w          = np.zeros((Nt, Ny, Nz))
+    p          = np.zeros((Nt, Ny, Nz))
+    rho        = np.zeros((Nt, Ny, Nz))
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        print("active threads: ", executor._max_workers)
+        futures = {executor.submit(_load_timestep_grad, DataName_fmt, tid, ind, X_ind, Ny, Nz): i
+                   for i, tid in enumerate(tids)}
+        for future in tqdm(as_completed(futures), total=Nt, desc=f"x={x:.3f}"):
+            i = futures[future]
+            grad_rho_x[i], grad_rho_y[i], grad_rho_z[i], u[i], v[i], w[i], p[i], rho[i] = future.result()
+
+    print(u.size)
+    print(Nt * Ny * Nz)
+    mf = u*rho
+    return grad_rho_x, grad_rho_y, grad_rho_z, u, v, w, p, rho,mf
+
+
+def write_time_history_h5(u, v, w, p, rho, mf, x, tid_str, tid_end, dt,
+                           caseName:str, out_dir="./", max_workers=None):
+    """
+    Write the full time history of a single axial-profile plane to HDF5.
+
+    Parameters
+    ----------
+    u, v, w, p, rho, mf : ndarray, shape (Nt, Ny, Nz)
+        Direct output of extract_data for the plane at x.
+    x : float
+        Streamwise coordinate of the plane.
+    tid_str, tid_end : int
+        First and last (exclusive) timestep indices passed to extract_data.
+    dt : int
+        Timestep stride used in extract_data.
+    out_dir : str
+        Directory in which to create the HDF5 file.
+    max_workers : int or None
+        Thread count for parallel dataset writes (None = os.cpu_count()).
+
+    Returns
+    -------
+    str
+        Absolute path to the written HDF5 file.
+    """
+    tids  = np.arange(tid_str, tid_end, dt)
+    z_max = z_lim(x)
+    z     = np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta)
+
+    x_tag = f"{x:.4f}".replace("-", "n").replace(".", "p")
+    fname = os.path.join(out_dir, f"{caseName}_noz_int_time_history_x_{x_tag}.h5")
+
+    flow_vars = {"u": u, "v": v, "w": w, "p": p, "rho": rho, "mf": mf}
+
+    with h5py.File(fname, "w") as hf:
+        # metadata and coordinates — written sequentially (structural ops)
+        hf.attrs["x"]       = x
+        hf.attrs["tid_str"] = tid_str
+        hf.attrs["tid_end"] = tid_end
+        hf.attrs["dt"]      = dt
+        hf.create_dataset("tids", data=tids)
+        hf.create_dataset("y",    data=y)
+        hf.create_dataset("z",    data=z)
+
+        # pre-allocate all flow-variable datasets before spawning threads
+        for name, arr in flow_vars.items():
+            hf.create_dataset(name, shape=arr.shape, dtype=arr.dtype,
+                              compression="gzip", compression_opts=4)
+
+        def _write_var(name):
+            hf[name][...] = flow_vars[name]
+            return name
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_write_var, name): name for name in flow_vars}
+            for fut in tqdm(as_completed(futures), total=len(futures),
+                            desc=f"writing h5 x={x:.3f}"):
+                fut.result()
+
+    print(f"  wrote: {fname}")
+    return fname
+
+
+def write_time_history_h5_grad(grad_rho_x, grad_rho_y, grad_rho_z,
+                                u, v, w, p, rho, mf,
+                                x, tid_str, tid_end, dt,
+                                caseName: str, out_dir="./", max_workers=None):
+    """
+    Write the full time history (grad_rho_* + flow vars) for a single axial
+    plane to HDF5.  Direct counterpart to write_time_history_h5 for data
+    produced by extract_data_grad.
+
+    Parameters
+    ----------
+    grad_rho_x, grad_rho_y, grad_rho_z : ndarray, shape (Nt, Ny, Nz)
+    u, v, w, p, rho, mf               : ndarray, shape (Nt, Ny, Nz)
+    x          : float  — streamwise coordinate of the plane
+    tid_str, tid_end : int — timestep range (same as passed to extract_data_grad)
+    dt         : int   — timestep stride
+    caseName   : str   — prepended to the filename
+    out_dir    : str   — output directory
+    max_workers: int | None — thread count for parallel dataset writes
+
+    Returns
+    -------
+    str  — absolute path of the written HDF5 file
+    """
+    tids  = np.arange(tid_str, tid_end, dt).astype(int)
+    z_max = z_lim(x)
+    z     = np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta)
+
+    x_tag = f"{x:.4f}".replace("-", "n").replace(".", "p")
+    fname = os.path.join(out_dir, f"{caseName}_noz_int_grad_time_history_x_{x_tag}.h5")
+
+    flow_vars = {
+        "grad_rho_x": grad_rho_x,
+        "grad_rho_y": grad_rho_y,
+        "grad_rho_z": grad_rho_z,
+        "u":   u,
+        "v":   v,
+        "w":   w,
+        "p":   p,
+        "rho": rho,
+        "mf":  mf,
+    }
+
+    with h5py.File(fname, "w") as hf:
+        hf.attrs["x"]       = x
+        hf.attrs["tid_str"] = tid_str
+        hf.attrs["tid_end"] = tid_end
+        hf.attrs["dt"]      = dt
+        hf.create_dataset("tids", data=tids)
+        hf.create_dataset("y",    data=y)
+        hf.create_dataset("z",    data=z)
+
+        for name, arr in flow_vars.items():
+            hf.create_dataset(name, shape=arr.shape, dtype=arr.dtype,
+                              compression="gzip", compression_opts=4)
+
+        def _write_var(name):
+            hf[name][...] = flow_vars[name]
+            return name
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_write_var, name): name for name in flow_vars}
+            for fut in tqdm(as_completed(futures), total=len(futures),
+                            desc=f"writing h5 grad x={x:.3f}"):
+                fut.result()
+
+    print(f"  wrote: {fname}")
+    return fname
+
+
 #TODO: plot various profile data at the 4 different lines defined with in BL_probes and assmemble these quantities
 #Avarilable quantities, by order are:
 #u,v,w,p,rho
@@ -571,8 +761,12 @@ def plotAxialProf(xc,var,z,y,var_label:str,out_dir,var_lim=None):
 
     plt.savefig(PlotName,dpi=300,bbox_inches="tight")
 
-def calcDel99():
+def calcDel99(u_avg,y_avg):
     #TODO: calculate delta_99
+    """
+    INPUT:
+    u_avg: the averaged (both in time and in trans)
+    """
     pass
 
 def calcDelStr():
@@ -598,14 +792,25 @@ def main():
     #out_dir_fmt = "/anvil/scratch/x-sdai/BL_post_proc/BL_{:s}"
     
     
-    TBL_test_cases = ["151M_akhil_restart"]
+    TBL_test_cases = ["TBL_0.0125_157M"]
+    #tid_str_cases = [529050]
+    tid_str_cases = [549600]
+    tid_end_cases = [549900]
     data_dir_fmt = "/anvil/scratch/x-sdai/AR2_base_{:s}/pcprobes_noz_int"
-    out_dir = "./test_Baseline_BL"
-
-
-    cpus = 4
-    #cpus = int(os.getenv("SLURM_NTASKS"))
+    out_dir = "/anvil/scratch/x-sdai/AIAA_SciTech_2027/BL_comp/"
+    dt = 150
+    debug_flag = True
+    if debug_flag:
+        #launched on login-node
+        cpus = 4
+    else:
+        #launched on compute node
+        cpus = int(os.getenv("SLURM_NTASKS"))
     print("assigned core count: ", cpus)
+    #DEBUG
+    print(data_dir_fmt.format(TBL_test_cases[0]))
+    print(out_dir)
+
     for i, case in enumerate(TBL_test_cases):
         plt.close('all')
         print("Now processing for TBL case: ", case)
@@ -614,21 +819,27 @@ def main():
         z_max = z_lim(0)
         z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
         #out_dir = out_dir_fmt.format(case)
-        posName = os.path.join(data_dir,"int_axprof.pxyz")
-        fname_fmt = "int_axprof.{:08d}.pcd"
+        #posName = os.path.join(data_dir,"int_axprof.pxyz")
+        #fname_fmt = "int_axprof.{:08d}.pcd"
+        posName = os.path.join(data_dir,"nov_int.pxyz")
+        fname_fmt = "nov_int.{:08d}.pcd"
         DataName_fmt = os.path.join(data_dir,fname_fmt)
         tid_str = tid_str_cases[i]
         tid_end = tid_end_cases[i]
+        tids = np.arange(tid_str,tid_end+dt,dt)
+        print(np.size(tids))
         for x in xs:
             #cpus = int(os.environ.get('SLURM_NTASK', 1))
-            u,v,w,p,rho,mf= extract_data(x,posName,DataName_fmt,tid_str,tid_end,50,max_workers=cpus)
+            grad_rho_x,grad_rho_y,grad_rho_z,u,v,w,p,rho,mf= extract_data_grad(x,posName,DataName_fmt,tid_str,tid_end,dt,max_workers=cpus)
             z_max = z_lim(x)
             #print(y)
             T = p/rho
             c = np.sqrt(gamma*T)
             z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
             print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
-            plotTurbProf_C(u,v,w,rho,p,x,y,z,out_dir = out_dir)
+            #plotTurbProf_C(u,v,w,rho,p,x,y,z,out_dir = out_dir)
+            #TODO: write h5 data to data storage
+            write_time_history_h5_grad(grad_rho_x,grad_rho_y,grad_rho_z,u,v,w,p,rho,mf,x,tid_str,tid_end,dt,case,out_dir)
             plotAxialProf(x,np.mean(u,axis=0),z,y,"u_avg",out_dir)
             plotAxialProf(x,np.mean(p,axis=0),z,y,"p_avg",out_dir)
             plotAxialProf(x,np.mean(u,axis=0)/np.mean(c,axis=0),z,y,"Mach_u",out_dir,var_lim=(0,1.5))
