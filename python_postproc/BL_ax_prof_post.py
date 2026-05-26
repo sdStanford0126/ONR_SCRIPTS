@@ -357,6 +357,39 @@ def write_time_history_h5_grad(grad_rho_x, grad_rho_y, grad_rho_z,
     return fname
 
 
+def read_time_history_h5_grad(fname):
+    """
+    Read an HDF5 file written by write_time_history_h5_grad.
+
+    Parameters
+    ----------
+    fname : str
+        Path to the HDF5 file.
+
+    Returns
+    -------
+    dict with keys:
+        x, tid_str, tid_end, dt          : scalar metadata (from file attrs)
+        tids, y, z                       : 1-D coordinate arrays
+        grad_rho_x, grad_rho_y, grad_rho_z : ndarray, shape (Nt, Ny, Nz)
+        u, v, w, p, rho, mf             : ndarray, shape (Nt, Ny, Nz)
+    """
+    with h5py.File(fname, "r") as hf:
+        out = {
+            "x":       hf.attrs["x"],
+            "tid_str": hf.attrs["tid_str"],
+            "tid_end": hf.attrs["tid_end"],
+            "dt":      hf.attrs["dt"],
+            "tids":    hf["tids"][:],
+            "y":       hf["y"][:],
+            "z":       hf["z"][:],
+        }
+        for var in ("grad_rho_x", "grad_rho_y", "grad_rho_z",
+                    "u", "v", "w", "p", "rho", "mf"):
+            out[var] = hf[var][:]
+    return out
+
+
 #TODO: plot various profile data at the 4 different lines defined with in BL_probes and assmemble these quantities
 #Avarilable quantities, by order are:
 #u,v,w,p,rho
@@ -543,7 +576,7 @@ def plotTurbProf_C(u,v,w,rho,p,xc,y,z, out_dir = "./",eps=delta/1.9, fig_offset=
     var_label = "ufvf_avg_div_u_tau_y_2"
     side_label = "y+"
     PlotName = PlotName_fmt.format(var_label,side_label)
-    plotSemiLogXProfile(xc,ufvf_avg_y[:Ny//2]/(u_tau_y**2),y_p[:Ny//2],side_label, r"$\frac{\overline{u'v'}}{u_{\tau,y}}$",PlotName,fig_id)
+    plotSemiLogXProfile(xc,ufvf_avg_y[:Ny//2]/(u_tau_y**2),y_p[:Ny//2],side_label, r"$\frac{\overline{u'v'}}{u_{\tau,y}^2}$",PlotName,fig_id)
 
     #ufwf_avg_z
     fig_id = 5 + fig_count*fig_offset
@@ -703,30 +736,45 @@ def _calcYplus(y,u_tau,nu):
     # y+ def: y+ = y * u_tau/nu 
     return y*u_tau/nu
 
-def plotProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id):
+def plotProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id,titName=None,lineLabel=None):
     plt.figure(fig_id)
-    plt.plot(var,pos, label = "x = %.2f" % xc)
+    if lineLabel == None:
+        plt.plot(var,pos, label = "x = %.2f" % xc)
+    else:
+        plt.plot(var,pos,label=lineLabel)
     plt.xlabel(var_label)
     plt.ylabel(side_label)
+    if titName != None:
+        plt.title(titName)
     plt.legend()
     plt.tight_layout()
     plt.savefig(PlotName, dpi = 300, bbox_inches="tight")
 
-def plotLogLogProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id):
+def plotLogLogProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id,titName=None,lineLabel=None):
     plt.figure(fig_id)
-    plt.loglog(var,pos, label = "x = %.2f" % xc)
+    if lineLabel == None:
+        plt.loglog(var,pos, label = "x = %.2f" % xc)
+    else:
+        plt.loglog(var,pos,label=lineLabel)
     plt.xlabel(var_label)
     plt.ylabel(side_label)
+    if titName != None:
+        plt.title(titName)
     plt.legend()
     plt.tight_layout()
     plt.savefig(PlotName, dpi = 300, bbox_inches="tight")
 
 
-def plotSemiLogXProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id):
+def plotSemiLogXProfile(xc,pos,var,var_label:str,side_label:str,PlotName: str,fig_id, titName=None,lineLabel=None):
     plt.figure(fig_id)
-    plt.semilogx(var,pos, label = "x = %.2f" % xc)
+    if lineLabel == None:
+        plt.semilogx(var,pos, label = "x = %.2f" % xc)
+    else:
+        plt.semilogx(var,pos,label=lineLabel)
     plt.xlabel(var_label)
     plt.ylabel(side_label)
+    if titName != None:
+        plt.title(titName)
     plt.legend()
     plt.tight_layout()
     plt.savefig(PlotName, dpi = 300, bbox_inches="tight")
@@ -761,11 +809,13 @@ def plotAxialProf(xc,var,z,y,var_label:str,out_dir,var_lim=None):
 
     plt.savefig(PlotName,dpi=300,bbox_inches="tight")
 
-def calcDel99(u_avg,y_avg):
+def calcDel99(u_avg,y):
     #TODO: calculate delta_99
     """
     INPUT:
     u_avg: the averaged (both in time and in trans)
+    y: normal direction
+    OUTPUT:
     """
     pass
 
@@ -792,14 +842,21 @@ def main():
     #out_dir_fmt = "/anvil/scratch/x-sdai/BL_post_proc/BL_{:s}"
     
     
-    TBL_test_cases = ["TBL_0.0125_157M"]
+    #TBL_test_cases = ["151M_akhil_restart","TBL_0.0125_157M"]
     #tid_str_cases = [529050]
-    tid_str_cases = [549600]
-    tid_end_cases = [549900]
+    #tid_str_cases = [549600]
+    #id_end_cases = [549900]
     data_dir_fmt = "/anvil/scratch/x-sdai/AR2_base_{:s}/pcprobes_noz_int"
     out_dir = "/anvil/scratch/x-sdai/AIAA_SciTech_2027/BL_comp/"
     dt = 150
-    debug_flag = True
+    debug_flag = False
+
+
+
+    TBL_test_cases = ["151M_akhil_restart","TBL_0.0125_157M"]
+    Plot_labels=["Baseline 151M", "BaseRough 157M"]
+
+
     if debug_flag:
         #launched on login-node
         cpus = 4
@@ -810,45 +867,114 @@ def main():
     #DEBUG
     print(data_dir_fmt.format(TBL_test_cases[0]))
     print(out_dir)
+    print("targeting postions are: ", xs)
+    # read data and get get plots
+    for x in xs: 
+        #for each axial section
+        #line plots of the following:
+        # u_avg_y vs y        -> fig0
+        x_tag = f"{x:.4f}".replace("-", "n").replace(".", "p")
+        figName0 = f"u_avg_y_x_{x_tag}.png"
+        titName0 = rf"$\overline{{u}}, x={x_tag}$"
+        figName0 = os.path.join(out_dir,figName0)
+        # u+_y vs y+          -> fig1
+        figName1 = f"up_avg_yp_x_{x_tag}.png"
+        titName1 = rf"$\overline{{u^+}}, x={x_tag}$"
+        figName1 = os.path.join(out_dir,figName1)
+        # <u'v'>/u_tau^2 vs y+-> fig2
+        figName2 = "upvp_avg_y_x_{x_tag}.png"
+        titName2 = rf"$\frac{{\overline{{u'v'}}}}{{u_{{\tau,y}}^2}}, x={x}$"
+        figName2 = os.path.join(out_dir,figName2)
+        
+        # u_avg_z vs z        -> fig3
+        figName3 = f"u_avg_z_x_{x_tag}.png"
+        titName3 = rf"$\overline{{u}}, x={x}$"
+        figName3 = os.path.join(out_dir,figName3)
+        # u+_z vs z+          -> fig4
+        figName4 = f"up_avg_zp_x_{x_tag}.png"
+        titName4 = rf"$\overline{{u^+}}, x={x}$"
+        figName4 = os.path.join(out_dir,figName4)
+        # <u'w'>/u_tau^2 vs z+-> fig5
+        figName5 = f"upvp_avg_z_x_{x_tag}.png"
+        titName5 = rf"$\frac{{\overline{{u'w'}}}}{{u_{{\tau,z}}^2}}, x={x}$"
+        figName5 = os.path.join(out_dir,figName5)
 
-    for i, case in enumerate(TBL_test_cases):
-        plt.close('all')
-        print("Now processing for TBL case: ", case)
-        data_dir = data_dir_fmt.format(case)
-        print(xs)
-        z_max = z_lim(0)
-        z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
-        #out_dir = out_dir_fmt.format(case)
-        #posName = os.path.join(data_dir,"int_axprof.pxyz")
-        #fname_fmt = "int_axprof.{:08d}.pcd"
-        posName = os.path.join(data_dir,"nov_int.pxyz")
-        fname_fmt = "nov_int.{:08d}.pcd"
-        DataName_fmt = os.path.join(data_dir,fname_fmt)
-        tid_str = tid_str_cases[i]
-        tid_end = tid_end_cases[i]
-        tids = np.arange(tid_str,tid_end+dt,dt)
-        print(np.size(tids))
-        for x in xs:
-            #cpus = int(os.environ.get('SLURM_NTASK', 1))
-            grad_rho_x,grad_rho_y,grad_rho_z,u,v,w,p,rho,mf= extract_data_grad(x,posName,DataName_fmt,tid_str,tid_end,dt,max_workers=cpus)
-            z_max = z_lim(x)
-            #print(y)
-            T = p/rho
-            c = np.sqrt(gamma*T)
-            z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
-            print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
-            #plotTurbProf_C(u,v,w,rho,p,x,y,z,out_dir = out_dir)
-            #TODO: write h5 data to data storage
-            write_time_history_h5_grad(grad_rho_x,grad_rho_y,grad_rho_z,u,v,w,p,rho,mf,x,tid_str,tid_end,dt,case,out_dir)
-            plotAxialProf(x,np.mean(u,axis=0),z,y,"u_avg",out_dir)
-            plotAxialProf(x,np.mean(p,axis=0),z,y,"p_avg",out_dir)
-            plotAxialProf(x,np.mean(u,axis=0)/np.mean(c,axis=0),z,y,"Mach_u",out_dir,var_lim=(0,1.5))
+        for i,caseName in enumerate(TBL_test_cases):
+            fname = os.path.join(out_dir, f"{caseName}_noz_int_grad_time_history_x_{x_tag}.h5")
+            #extract data for a given case
+            xcData = read_time_history_h5_grad(fname)
+            #positional data
+            y = xcData.get("y")
+            z = xcData.get("z")
+            #variable (Nt * Ny * Nz)
+            grad_rho_x=xcData.get("grad_rho_x")
+            u = xcData.get("u")
+            v = xcData.get("v")
+            w = xcData.get("w")
+            rho = xcData.get("rho")
+            p = xcData.get("p")
+
+            #get turbulence data
+            turbStat = CalcTurbProf(u, v, w, rho, p, x, y, z)
+            u_avg_y         = turbStat.get("u_avg_y")
+            y_p             = turbStat.get("y_p")
+            u_p_y           = turbStat.get("u_p_y")
+            ufvf_avg_y_norm = turbStat.get("ufvf_avg_y_norm")
+            u_avg_z         = turbStat.get("u_avg_z")
+            z_p             = turbStat.get("z_p")
+            u_p_z           = turbStat.get("u_p_z")
+            ufwf_avg_z_norm = turbStat.get("ufwf_avg_z_norm")
+
+            #plot 2D axial profiles
+            plotProfile(x,u_avg_y,y,r"$y$",r"$\overline{u}/c_\infty$",figName0,0,titName0,Plot_labels[i])
+            plotSemiLogXProfile(x,u_p_y,y_p,r"$y+$", r"$\overline{u}_+$",figName1,1,titName1,Plot_labels[i])
+            plotProfile(x,np.abs(ufvf_avg_y_norm),y_p,r"$y+$",rf"$\frac{{\overline{{u'v'}}}}{{u_{{\tau,y}}^2}}$",figName2,2,titName2,Plot_labels[i])
+            plotProfile(x,u_avg_z,z,r"$z$",r"$\overline{u}/c_\infty$",figName3,3,titName3,Plot_labels[i])
+            plotSemiLogXProfile(x,u_p_z,z_p,r"$z+$", r"$\overline{u}_+$",figName4,4,titName4,Plot_labels[i])
+            plotProfile(x,np.abs(ufwf_avg_z_norm),z_p,r"$z+$",rf"$\frac{{\overline{{u'v'}}}}{{u_{{\tau,y}}^2}}$",figName5,5,titName5,Plot_labels[i])
+                        
+        plt.close('all') #close all per axial station
+ 
+    """
+    #for i, case in enumerate(TBL_test_cases):
+    #    plt.close('all')
+    #    print("Now processing for TBL case: ", case)
+    #    data_dir = data_dir_fmt.format(case)
+    #    print(xs)
+    #    z_max = z_lim(0)
+    #    z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
+    #    #out_dir = out_dir_fmt.format(case)
+    #    #posName = os.path.join(data_dir,"int_axprof.pxyz")
+    #    #fname_fmt = "int_axprof.{:08d}.pcd"
+    #    posName = os.path.join(data_dir,"nov_int.pxyz")
+    #    fname_fmt = "nov_int.{:08d}.pcd"
+    #    DataName_fmt = os.path.join(data_dir,fname_fmt)
+    #    tid_str = tid_str_cases[i]
+    #    tid_end = tid_end_cases[i]
+    #    tids = np.arange(tid_str,tid_end+dt,dt)
+    #    print(np.size(tids))
+    #    for x in xs:
+    #        #cpus = int(os.environ.get('SLURM_NTASK', 1))
+    #        grad_rho_x,grad_rho_y,grad_rho_z,u,v,w,p,rho,mf= extract_data_grad(x,posName,DataName_fmt,tid_str,tid_end,dt,max_workers=cpus)
+    #        z_max = z_lim(x)
+    #        #print(y)
+    #        T = p/rho
+    #        c = np.sqrt(gamma*T)
+    #        z =np.arange(-(z_max - delta / 2.0), (z_max - delta / 2.0) + delta * 0.5, delta) 
+    #        print("mass flow at x=%.2f is mf = %.2f " % (x,evalMfAvg(mf,z,y)))
+    #        #plotTurbProf_C(u,v,w,rho,p,x,y,z,out_dir = out_dir)
+    #        #TODO: write h5 data to data storage
+    #        write_time_history_h5_grad(grad_rho_x,grad_rho_y,grad_rho_z,u,v,w,p,rho,mf,x,tid_str,tid_end,dt,case,out_dir)
+    #        plotAxialProf(x,np.mean(u,axis=0),z,y,"u_avg",out_dir)
+    #        plotAxialProf(x,np.mean(p,axis=0),z,y,"p_avg",out_dir)
+    #        plotAxialProf(x,np.mean(u,axis=0)/np.mean(c,axis=0),z,y,"Mach_u",out_dir,var_lim=(0,1.5))
 
             
 
     #load baseline h5 make the same plots based using the same functions
     #need to supply new x,y,z
     #grab x slices
+    """
 if __name__ == "__main__":
     t_start = time.perf_counter()
     main()
