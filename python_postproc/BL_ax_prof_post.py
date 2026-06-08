@@ -1,6 +1,4 @@
-#THis is being used to post processing time averaged
-#results for the BL_interior_probes (axial profiles)
-
+#rewritten to take advantage of existing pcprobes_noz_int data for boundary layer processing
 import os
 import time
 import numpy as np
