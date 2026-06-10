@@ -302,7 +302,7 @@ def write_avg_h5(grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
     -------
     str  — absolute path of the written HDF5 file
     """
-    fname = os.path.join(out_dir, f"{caseName}_noz_int_avg.h5")
+    fname = os.path.join(out_dir, f"{caseName}_noz_int_avg_T_{T}.h5")
 
     avg_vars = {
         "grad_rho_x_avg": grad_rho_x_avg,
@@ -326,6 +326,59 @@ def write_avg_h5(grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
 
     print(f"  wrote: {fname}")
     return fname
+
+def read_avg_h5(fname: str):
+    """
+    Read the time-averaged HDF5 file written by write_avg_h5.
+
+    Parameters
+    ----------
+    fname : str — path to the HDF5 file
+
+    Returns
+    -------
+    grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
+    u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,
+    X, Y, Z  — all ndarray, shape (Npts,)
+    """
+    with h5py.File(fname, "r") as hf:
+        X             = hf["X"][:]
+        Y             = hf["Y"][:]
+        Z             = hf["Z"][:]
+        grad_rho_x_avg = hf["grad_rho_x_avg"][:]
+        grad_rho_y_avg = hf["grad_rho_y_avg"][:]
+        grad_rho_z_avg = hf["grad_rho_z_avg"][:]
+        u_avg          = hf["u_avg"][:]
+        v_avg          = hf["v_avg"][:]
+        w_avg          = hf["w_avg"][:]
+        p_avg          = hf["p_avg"][:]
+        rho_avg        = hf["rho_avg"][:]
+        mf_avg         = hf["mf_avg"][:]
+        Mach_avg       = hf["Mach_avg"][:]
+    return (grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
+            u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,
+            X, Y, Z)
+
+def plot_slices(x,y,z,y_pos,delta,data,cmap='viridis',ub = np.inf, lb = -np.inf, title='test',outdir="./",figname="test.png"):
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    for i, y_c in enumerate(y_pos):
+        condition = (y > (y_c - delta/2)) & (y < (y_c + delta/2))
+        x_plot=x[condition]
+        y_plot=y[condition]
+        z_plot=z[condition]
+        data_plot=data[condition] 
+        ax.scatter(x_plot,y_plot,z_plot,c=data_plot,cmap=cmap)
+    # 4. Set axes labels and title
+    ax.set_xlabel('X Axis')
+    ax.set_ylabel('Y Axis')
+    ax.set_zlabel('Z Axis')
+    plt.title(title)
+
+    # 5. save plot
+    fig.savefig(os.path.join(outdir,figname), dpi=300, bbox_inches="tight")
+    plt.close(fig)
+ 
 
 def plot_scatter_contour_3d(x, y, z, data, cmap='viridis',tgt_val= 1.0, delta=0.05,marker_size=50, alpha=0.8, title='test',outdir="./",figname="test.png"):
     """
@@ -394,9 +447,9 @@ def main():
     caseNames = ["base_151M_akhil_restart", "port_252M_V8", "port_252M_V10"]
     titles = [rf"Baseline 151M", rf"Port Injection 252M, $IPR=1.45$", rf"Port Injection 252M, $IPR=1.98"]
     tid_strs = [884550,1225500,750]
-    tid_ends = [999000,1683000,625500]
+    tid_ends = [984600,1683000,500250]
     dts      = [150,750,750]
-    Ts = [(tid_end - tid_str)*dt for tid_str,tid_end,dt in zip(tid_strs,tid_ends,dts)]
+    Ts = [(tid_end - tid_str)/dt * 0.15 for tid_str,tid_end,dt in zip(tid_strs,tid_ends,dts)]
     print("total sample times are: ", Ts)
    #delta_t = [1e-3,2e-4,2e-4]
     #files naming scheme
@@ -416,7 +469,7 @@ def main():
         tid_str = tid_strs[i]
         tid_end = tid_ends[i]
         dt      = dts[i]
-        T       = Ts[i]
+        T       = int(Ts[i])
         tids = np.arange(tid_str,tid_end+dt,dt)
         print(np.size(tids))
         #grad_rho_x, grad_rho_y, grad_rho_z, u, v, w, p, rho,mf,X,Y,Z = buildTimeRecord(
@@ -432,13 +485,13 @@ def main():
         #p_avg   = np.mean(p,axis=0)
         #rho_avg = np.mean(rho,axis=0)
 
-        #R = 1
-        #gamma = 1.4 
-        #T_avg = p_avg/(rho_avg*R)
+        R = 1
+        gamma = 1.4 
+        T_avg = p_avg/(rho_avg*R)
 
-        #vel_mag_avg = np.sqrt(u_avg**2 + v_avg**2 + w_avg**2)
-        #c_avg = np.sqrt(gamma*R*T_avg)
-        #Mach_avg = vel_mag_avg/c_avg
+        vel_mag_avg = np.sqrt(u_avg**2 + v_avg**2 + w_avg**2)
+        c_avg = np.sqrt(gamma*R*T_avg)
+        Mach_avg = vel_mag_avg/c_avg
         (grad_rho_x_avg,grad_rho_y_avg,grad_rho_z_avg,
          u_avg,v_avg,w_avg,p_avg,rho_avg,
          mf_avg,Mach_avg
@@ -448,5 +501,10 @@ def main():
                       u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,
                       X, Y, Z,T,
                       caseName, out_dir)
+        #fname = os.path.join(out_dir, f"{caseName}_noz_int_avg_T_{T}.h5")
+        #grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,X, Y, Z = read_avg_h5(fname)
+
+        plot_scatter_contour_3d(X, Y, Z, grad_rho_x_avg, cmap='viridis',tgt_val= 10, delta=0.05,marker_size=50, alpha=0.8, title='test',outdir="./",figname="test.png") 
+        plot_slices(X,Y,Z,np.linspace(0,1-delta,10),delta,grad_rho_x_avg)
 if __name__ =="__main__":
     main()
