@@ -1,4 +1,5 @@
-#ignore hidden files
-.*
+#ignore err/out
+*.err
+*.out
 #ignore pictures
 *.png

@@ -80,7 +80,7 @@ def buildTimeRecord(posName,dataName_fmt,tids,max_workers=None):
     mf = u*rho
     return grad_rho_x, grad_rho_y, grad_rho_z, u, v, w, p, rho,mf,X,Y,Z
 
-def _calc_c(p,rho,R=1,gamma=1.4):
+def _calc_c(p,rho,R=1.0/1.4,gamma=1.4):
     """
     computes speed of sound (c) assuming ideal gas laws
     """
@@ -362,21 +362,42 @@ def read_avg_h5(fname: str):
 def plot_slices(x,y,z,y_pos,delta,data,cmap='viridis',ub = np.inf, lb = -np.inf, title='test',outdir="./",figname="test.png"):
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
+    data_min = np.min(data)
+    data_max = np.max(data)
+    data_range = data_max - data_min
+    data_mean = np.mean(data)
+    data_center = (data_max-data_min)/2.0 + data_min
+    max_section = np.maximum(data_mean-data_min,data_max-data_mean)
+    alpha = np.abs(data)/(max_section)
+    from matplotlib import cm,colors
     for i, y_c in enumerate(y_pos):
         condition = (y > (y_c - delta/2)) & (y < (y_c + delta/2))
         x_plot=x[condition]
         y_plot=y[condition]
         z_plot=z[condition]
-        data_plot=data[condition] 
-        ax.scatter(x_plot,y_plot,z_plot,c=data_plot,cmap=cmap)
+        data_plot=data[condition]
+        alpha_plot = alpha[condition]
+        norm_c = colors.Normalize(vmin=-3, vmax=3)
+        cmap = cm.viridis
+
+        norm_a = colors.Normalize(vmin=alpha.min(), vmax=alpha.max())
+        alpha_plot = norm_a(alpha_plot)
+        
+        #print(alpha.max)
+        #print(alpha.min)
+        print(np.min(alpha))
+        print(np.max(alpha))
+        rgba = cmap(norm_c(data_plot))
+        rgba[:,3]=alpha_plot
+        sp=ax.scatter(x_plot,y_plot,z_plot,c=rgba)
     # 4. Set axes labels and title
     ax.set_xlabel('X Axis')
     ax.set_ylabel('Y Axis')
     ax.set_zlabel('Z Axis')
     plt.title(title)
-
+    #plt.colorbar(sp)
     # 5. save plot
-    fig.savefig(os.path.join(outdir,figname), dpi=300, bbox_inches="tight")
+    fig.savefig(os.path.join(outdir,figname), dpi=300,bbox_inches="tight")
     plt.close(fig)
  
 
@@ -485,13 +506,13 @@ def main():
         #p_avg   = np.mean(p,axis=0)
         #rho_avg = np.mean(rho,axis=0)
 
-        R = 1
-        gamma = 1.4 
-        T_avg = p_avg/(rho_avg*R)
+        #R = 1
+        #gamma = 1.4 
+        #T_avg = p_avg/(rho_avg*R)
 
-        vel_mag_avg = np.sqrt(u_avg**2 + v_avg**2 + w_avg**2)
-        c_avg = np.sqrt(gamma*R*T_avg)
-        Mach_avg = vel_mag_avg/c_avg
+        #vel_mag_avg = np.sqrt(u_avg**2 + v_avg**2 + w_avg**2)
+        #c_avg = np.sqrt(gamma*R*T_avg)
+        #Mach_avg = vel_mag_avg/c_avg
         (grad_rho_x_avg,grad_rho_y_avg,grad_rho_z_avg,
          u_avg,v_avg,w_avg,p_avg,rho_avg,
          mf_avg,Mach_avg
