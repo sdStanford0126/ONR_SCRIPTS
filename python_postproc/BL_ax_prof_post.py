@@ -807,7 +807,7 @@ def plotAxialProf(xc,var,z,y,var_label:str,out_dir,var_lim=None):
 
     plt.savefig(PlotName,dpi=300,bbox_inches="tight")
 
-def calcDel99(u_avg,y):
+def calcDel99(u_avg,y,debug=False):
     #TODO: calculate delta_99
     """
     INPUT:
@@ -815,7 +815,20 @@ def calcDel99(u_avg,y):
     y: normal direction
     OUTPUT:
     """
-    pass
+    ind_str = 18
+    ind_end = 30
+    u_inf = np.mean(u_avg[ind_str:ind_end]) + np.mean(u_avg[-ind_end:-ind_str])
+    inds = np.where(u_avg > 0.99*u_inf)
+    y_min = np.min(y)
+    y_max = np.max(y)
+    del99_lo = np.abs(y[inds[0]-1] - y_min)
+    del99_hi = np.abs(y[inds[-1]+1] - y_max)
+    if debug:
+        print(f"start position is {y[ind_str]}")
+        print(f"end position is {y[ind_end]}")
+        print(f"del99_lo is {del99_lo}")
+        print(f"del99_hi is {del99_hi}")
+    return (del99_lo+del99_hi)/2.0
 
 def calcDelStr():
     #TODO: calculate displacement thickness (delta_star)
@@ -922,7 +935,9 @@ def main():
             z_p             = turbStat.get("z_p")
             u_p_z           = turbStat.get("u_p_z")
             ufwf_avg_z_norm = turbStat.get("ufwf_avg_z_norm")
-
+            print(f"for {caseName} at x = {x}")
+            print(f"y_plus minimum is {np.min(y_p)}")
+            print(f"z_plus minimum is {np.min(z_p)}")
             #plot 2D axial profiles
             plotProfile(x,u_avg_y,y,r"$y$",r"$\overline{u}/c_\infty$",figName0,0,titName0,Plot_labels[i])
             plotSemiLogXProfile(x,u_p_y,y_p,r"$y+$", r"$\overline{u}_+$",figName1,1,titName1,Plot_labels[i])
@@ -930,7 +945,13 @@ def main():
             plotProfile(x,u_avg_z,z,r"$z$",r"$\overline{u}/c_\infty$",figName3,3,titName3,Plot_labels[i])
             plotSemiLogXProfile(x,u_p_z,z_p,r"$z+$", r"$\overline{u}_+$",figName4,4,titName4,Plot_labels[i])
             plotProfile(x,np.abs(ufwf_avg_z_norm),z_p,r"$z+$",rf"$\frac{{\overline{{u'v'}}}}{{u_{{\tau,y}}^2}}$",figName5,5,titName5,Plot_labels[i])
-                        
+
+            #calc Del99
+            print(f"for {caseName} at x = {x}")
+            del99_y = calcDel99(u_avg_y,turbStat.get("y"),debug=True)
+            del99_z = calcDel99(u_avg_z,turbStat.get("z"),debug=True)
+            print(f"del99_y is {del99_y}")
+            print(f"del99_z is {del99_z}")
         plt.close('all') #close all per axial station
  
     """

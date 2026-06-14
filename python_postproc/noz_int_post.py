@@ -182,7 +182,7 @@ def _load_timestep_avg(dataName_fmt, tid, ind):
     Mach_t = np.sqrt(u_t**2 + v_t**2 + w_t**2) / _calc_c(p_t, rho_t)
     return DataRo[:, 0], DataRo[:, 1], DataRo[:, 2], u_t, v_t, w_t, p_t, rho_t, mf_t, Mach_t
 
-def buildAvgData_parallel(posName, dataName_fmt, tids, max_workers=None):
+def buildAvgData_parallel(posName, dataName_fmt, tids, max_workers=None,gamma=1.4):
     """
     Parallelized version of buildAvgData using ThreadPoolExecutor.
     Each timestep is loaded concurrently; results are accumulated in the main thread.
@@ -195,7 +195,7 @@ def buildAvgData_parallel(posName, dataName_fmt, tids, max_workers=None):
     X = np.zeros(Npts); X[ind] = Pos[:, 1]
     Y = np.zeros(Npts); Y[ind] = Pos[:, 2]
     Z = np.zeros(Npts); Z[ind] = Pos[:, 3]
-
+    p_inf = 1/gamma
     Nsamp = np.size(tids)
     grad_rho_x = np.zeros(Npts)
     grad_rho_y = np.zeros(Npts)
@@ -207,6 +207,7 @@ def buildAvgData_parallel(posName, dataName_fmt, tids, max_workers=None):
     rho = np.zeros(Npts)
     mf  = np.zeros(Npts)
     Mach = np.zeros(Npts)
+    thrust = np.zeros(Npts)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         print("active threads: ", executor._max_workers)
@@ -217,9 +218,10 @@ def buildAvgData_parallel(posName, dataName_fmt, tids, max_workers=None):
             grad_rho_x += grx;  grad_rho_y += gry;  grad_rho_z += grz
             u += u_t;  v += v_t;  w += w_t
             p += p_t;  rho += rho_t;  mf += mf_t;  Mach += Mach_t
+            thrust += rho_t*np.power(u_t,2.0) + (p_t-p_inf)
 
     return (grad_rho_x/Nsamp, grad_rho_y/Nsamp, grad_rho_z/Nsamp,
-            u/Nsamp, v/Nsamp, w/Nsamp, p/Nsamp, rho/Nsamp, mf/Nsamp, Mach/Nsamp,
+            u/Nsamp, v/Nsamp, w/Nsamp, p/Nsamp, rho/Nsamp, mf/Nsamp, Mach/Nsamp,thrust/Nsamp,
             X, Y, Z)
 
 
@@ -285,7 +287,7 @@ def write_time_history_h5(grad_rho_x, grad_rho_y, grad_rho_z,
     return fname
 
 def write_avg_h5(grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
-                      u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,
+                      u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,thrust_avg,
                       X, Y, Z,T,
                       caseName: str, out_dir="./"):
     """
@@ -315,6 +317,7 @@ def write_avg_h5(grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
         "rho_avg":  rho_avg,
         "mf_avg":   mf_avg,
         "Mach_avg": Mach_avg,
+        "thrust_avg": thrust_avg
     }
 
     with h5py.File(fname, "w") as hf:
@@ -385,8 +388,8 @@ def plot_slices(x,y,z,y_pos,delta,data,cmap='viridis',ub = np.inf, lb = -np.inf,
         
         #print(alpha.max)
         #print(alpha.min)
-        print(np.min(alpha))
-        print(np.max(alpha))
+        #print(np.min(alpha))
+        #print(np.max(alpha))
         rgba = cmap(norm_c(data_plot))
         rgba[:,3]=alpha_plot
         sp=ax.scatter(x_plot,y_plot,z_plot,c=rgba)
@@ -465,11 +468,12 @@ def main():
     data_dir_fmt = "/anvil/scratch/x-sdai/AR2_{:s}/pcprobes_noz_int"
     out_dir = "/anvil/scratch/x-sdai/noz_int_post"
 
-    caseNames = ["base_151M_akhil_restart", "port_252M_V8", "port_252M_V10"]
-    titles = [rf"Baseline 151M", rf"Port Injection 252M, $IPR=1.45$", rf"Port Injection 252M, $IPR=1.98"]
-    tid_strs = [884550,1225500,750]
-    tid_ends = [984600,1683000,500250]
-    dts      = [150,750,750]
+    caseNames = ["base_151M_akhil_restart", "port_252M_V8", "port_252M_V10","port_252M_V7_str"]
+    titles = [rf"Baseline 151M", rf"Port Injection 252M, $IPR=1.45$", rf"Port Injection 252M, $IPR=1.98$",
+              rf"Port Injection 252M, $IPR=2.25$"]
+    tid_strs = [884550,1225500,750,551250]
+    tid_ends = [924600,1425500,200250,751500]
+    dts      = [150,750,750,750]
     Ts = [(tid_end - tid_str)/dt * 0.15 for tid_str,tid_end,dt in zip(tid_strs,tid_ends,dts)]
     print("total sample times are: ", Ts)
    #delta_t = [1e-3,2e-4,2e-4]
@@ -483,7 +487,7 @@ def main():
     else:
         cpus = int(os.getenv("SLURM_NTASKS"))
     print("assigned core count: ", cpus)
-    figname_fmt = "Mach_3D_scatter_{:s}.png"
+    figname_fmt = "grad_rho_x_scatter_{:s}.png"
 
     for i,caseName in enumerate(caseNames):
         data_dir = data_dir_fmt.format(caseName)
@@ -491,6 +495,7 @@ def main():
         tid_end = tid_ends[i]
         dt      = dts[i]
         T       = int(Ts[i])
+        title = titles[i]
         tids = np.arange(tid_str,tid_end+dt,dt)
         print(np.size(tids))
         #grad_rho_x, grad_rho_y, grad_rho_z, u, v, w, p, rho,mf,X,Y,Z = buildTimeRecord(
@@ -515,17 +520,18 @@ def main():
         #Mach_avg = vel_mag_avg/c_avg
         (grad_rho_x_avg,grad_rho_y_avg,grad_rho_z_avg,
          u_avg,v_avg,w_avg,p_avg,rho_avg,
-         mf_avg,Mach_avg
+         mf_avg,Mach_avg,thrust_avg
          ,X,Y,Z)=buildAvgData_parallel(os.path.join(data_dir,posName), os.path.join(data_dir,dataName_fmt), tids, max_workers=cpus)
         plot_scatter_contour_3d(X,Y,Z,Mach_avg,tgt_val=1.0, delta=0.05,title=titles[i],outdir=out_dir,figname=figname_fmt.format(caseName))
         write_avg_h5(grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,
-                      u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,
+                      u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,thrust_avg,
                       X, Y, Z,T,
                       caseName, out_dir)
         #fname = os.path.join(out_dir, f"{caseName}_noz_int_avg_T_{T}.h5")
         #grad_rho_x_avg, grad_rho_y_avg, grad_rho_z_avg,u_avg, v_avg, w_avg, p_avg, rho_avg, mf_avg, Mach_avg,X, Y, Z = read_avg_h5(fname)
 
         plot_scatter_contour_3d(X, Y, Z, grad_rho_x_avg, cmap='viridis',tgt_val= 10, delta=0.05,marker_size=50, alpha=0.8, title='test',outdir="./",figname="test.png") 
-        plot_slices(X,Y,Z,np.linspace(0,1-delta,10),delta,grad_rho_x_avg)
+        figname = figname_fmt.format(caseName)
+        plot_slices(X,Y,Z,np.linspace(0,1-delta,10),delta,grad_rho_x_avg,outdir=out_dir,title=title,figname=figname)
 if __name__ =="__main__":
     main()
