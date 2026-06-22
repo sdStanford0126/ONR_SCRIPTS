@@ -2,10 +2,10 @@
 %interpolating from two exisitng IPRs to find new IPR match experimental
 %IPRds
 IPR1 = 2.25
-IPR2 = 1.45
+IPR2 = 1.98
 
 MFR1 = 2.11
-MFR2 = 1.03
+MFR2 = 1.47
 
 MFR_tgt = 1.75
 
