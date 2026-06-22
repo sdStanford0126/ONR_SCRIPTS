@@ -697,6 +697,12 @@ def CalcTurbProf(u, v, w, rho, p, xc, y, z, eps=delta/1.9):
     u_p_y = u_avg_y / u_tau_y
     u_p_z = u_avg_z / u_tau_z
 
+    TKE = np.mean(uf**2 + vf**2 + wf**2,axis=0)
+    TKE_y = np.squeeze(TKE[:,z_ind])
+    TKE_z = np.squeeze(TKE[y_ind,:])
+    TKE_y = np.mean(TKE_y,axis=1)
+    TKE_z = np.mean(TKE_z,axis=0)
+
     return {
         "y":       y,
         "u_avg_y": u_avg_y,
@@ -722,6 +728,8 @@ def CalcTurbProf(u, v, w, rho, p, xc, y, z, eps=delta/1.9):
         "rho_avg_z": rho_avg_z,
         "T_avg_y":   T_avg_y,
         "T_avg_z":   T_avg_z,
+        "TKE_y"  : TKE_y,
+        "TKE_z"  : TKE_z
     }
 
 
@@ -817,12 +825,14 @@ def calcDel99(u_avg,y,debug=False):
     """
     ind_str = 18
     ind_end = 30
-    u_inf = np.mean(u_avg[ind_str:ind_end]) + np.mean(u_avg[-ind_end:-ind_str])
+    u_inf = (np.mean(u_avg[ind_str:ind_end]) + np.mean(u_avg[-ind_end:-ind_str]))/2.0
     inds = np.where(u_avg > 0.99*u_inf)
+    inds = inds[0]
+    Ny = np.size(y)
     y_min = np.min(y)
     y_max = np.max(y)
-    del99_lo = np.abs(y[inds[0]-1] - y_min)
-    del99_hi = np.abs(y[inds[-1]+1] - y_max)
+    del99_lo = np.abs(y[np.maximum(inds[0]-1,0)] - y_min)
+    del99_hi = np.abs(y[np.minimum(inds[-1]+1,Ny-1)] - y_max)
     if debug:
         print(f"start position is {y[ind_str]}")
         print(f"end position is {y[ind_end]}")
@@ -910,6 +920,16 @@ def main():
         titName5 = rf"$\frac{{\overline{{u'w'}}}}{{u_{{\tau,z}}^2}}, x={x}$"
         figName5 = os.path.join(out_dir,figName5)
 
+        #TKE/Uj assessment y
+        figName6 = f"TKE_avg_y_x_{x_tag}.png"
+        titName6 = rf"$\frac{{TKE}}{{Uj^2}}, x={x}$"
+        figName6 = os.path.join(out_dir,figName6)
+
+        #TKE/Uj assessment z
+        figName7 = f"TKE_avg_z_x_{x_tag}.png"
+        titName7 = rf"$\frac{{TKE}}{{Uj^2}}, x={x}$"
+        figName7 = os.path.join(out_dir,figName7)
+
         for i,caseName in enumerate(TBL_test_cases):
             fname = os.path.join(out_dir, f"{caseName}_noz_int_grad_time_history_x_{x_tag}.h5")
             #extract data for a given case
@@ -949,11 +969,17 @@ def main():
             #calc Del99
             print(f"for {caseName} at x = {x}")
             del99_y = calcDel99(u_avg_y,turbStat.get("y"),debug=True)
-            del99_z = calcDel99(u_avg_z,turbStat.get("z"),debug=True)
+            #del99_z = calcDel99(u_avg_z,turbStat.get("z"),debug=True)
             print(f"del99_y is {del99_y}")
-            print(f"del99_z is {del99_z}")
+            #print(f"del99_z is {del99_z}")
+
+            Uj = 1.16
+            
+            plotProfile(x,turbStat.get("TKE_y")/Uj**2,y,r"$y$",r"$2*TKE/U_j^2$",figName6,6,titName6,Plot_labels[i])
+            plotProfile(x,turbStat.get("TKE_z")/Uj**2,z,r"$z$",r"2*TKE/U_j^2",figName7,7,titName7,Plot_labels[i])
         plt.close('all') #close all per axial station
- 
+    
+
     """
     #for i, case in enumerate(TBL_test_cases):
     #    plt.close('all')
